@@ -66,4 +66,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Exo player
+    implementation(libs.bundles.media3.bundles)
+
+    // Hilt navigation compose
+    implementation(libs.hilt.compose)
 }
