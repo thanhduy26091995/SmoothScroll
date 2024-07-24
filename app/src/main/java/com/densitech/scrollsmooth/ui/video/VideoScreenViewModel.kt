@@ -18,7 +18,27 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
                 title = "My cat my cat"
             ),
             MediaItem(
+                url = "https://storage.googleapis.com/exoplayer-test-media-1/gen-3/screens/dash-vod-single-segment/video-avc-baseline-480.mp4",
+                title = "My cat my cat"
+            ),
+            MediaItem(
+                url = "https://html5demos.com/assets/dizzy.mp4",
+                title = "My cat my cat"
+            ),
+            MediaItem(
                 url = "https://bestvpn.org/html5demos/assets/dizzy.mp4",
+                title = "My cat my cat"
+            ),
+            MediaItem(
+                url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4",
+                title = "My cat my cat"
+            ),
+            MediaItem(
+                url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_2.mp4",
+                title = "My cat my cat"
+            ),
+            MediaItem(
+                url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_3.mp4",
                 title = "My cat my cat"
             ),
         )
