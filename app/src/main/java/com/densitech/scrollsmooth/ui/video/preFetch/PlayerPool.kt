@@ -2,7 +2,9 @@ package com.densitech.scrollsmooth.ui.video.preFetch
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.os.Handler
 import android.os.Looper
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.RenderersFactory
@@ -35,6 +37,76 @@ class PlayerPool
     private val playerRequestTokenSet: MutableSet<Int> = Collections.synchronizedSet(HashSet())
     private val playerFactory: PlayerFactory =
         DefaultPlayerFactory(context, playbackLooper, loadControl, renderersFactory, bandwidthMeter)
+
+    fun acquirePlayer(token: Int, callback: (ExoPlayer) -> Unit) {
+        synchronized(playerMap) {
+            if (playerMap.size < numberOfPlayers) {
+                val player = playerFactory.createPlayer()
+                playerMap[playerMap.size] = player
+                callback.invoke(player)
+                return
+            }
+
+            // Add token to set of views requesting players
+            playerRequestTokenSet.add(token)
+            acquirePlayerInternal(token, callback)
+        }
+    }
+
+    private fun acquirePlayerInternal(token: Int, callback: (ExoPlayer) -> Unit) {
+        synchronized(playerMap) {
+            if (!availablePlayerQueue.isEmpty()) {
+                val playerNumber = availablePlayerQueue.remove()
+                playerMap[playerNumber]?.let(callback)
+                playerRequestTokenSet.remove(token)
+                return
+            }
+
+            if (playerRequestTokenSet.contains(token)) {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    acquirePlayerInternal(token, callback)
+                }, 500)
+            }
+        }
+    }
+
+    fun play(player: Player) {
+        pauseAllPlayer(player)
+        player.play()
+    }
+
+    fun releasePlayer(token: Int, player: ExoPlayer?) {
+        synchronized(playerMap) {
+            // Remove token from set of views requesting players & remove potential callbacks
+            // trying to grab the player
+
+            playerRequestTokenSet.remove(token)
+            player?.stop()
+            player?.clearMediaItems()
+
+            if (player != null) {
+                val playerNumber = playerMap.inverse()[player]
+                availablePlayerQueue.add(playerNumber)
+            }
+        }
+    }
+
+    fun destroyPlayer() {
+        synchronized(playerMap) {
+            for (i in 0 until playerMap.size) {
+                playerMap[i]?.release()
+                playerMap.remove(i)
+            }
+        }
+    }
+
+    fun pauseAllPlayer(keepOnGoingPlayer: Player? = null) {
+        playerMap.values.forEach {
+            if (it != keepOnGoingPlayer) {
+                it.pause()
+            }
+        }
+    }
 
     private class DefaultPlayerFactory(
         private val context: Context,

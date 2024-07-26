@@ -1,6 +1,7 @@
 package com.densitech.scrollsmooth.ui.video
 
 import androidx.lifecycle.ViewModel
+import androidx.media3.common.MediaItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,39 +14,13 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
 
     init {
         _playList.value = listOf(
-            MediaItem(
-                url = "https://bestvpn.org/html5demos/assets/dizzy.mp4",
-                title = "My cat my cat"
-            ),
-            MediaItem(
-                url = "https://storage.googleapis.com/exoplayer-test-media-1/gen-3/screens/dash-vod-single-segment/video-avc-baseline-480.mp4",
-                title = "My cat my cat"
-            ),
-            MediaItem(
-                url = "https://html5demos.com/assets/dizzy.mp4",
-                title = "My cat my cat"
-            ),
-            MediaItem(
-                url = "https://bestvpn.org/html5demos/assets/dizzy.mp4",
-                title = "My cat my cat"
-            ),
-            MediaItem(
-                url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4",
-                title = "My cat my cat"
-            ),
-            MediaItem(
-                url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_2.mp4",
-                title = "My cat my cat"
-            ),
-            MediaItem(
-                url = "https://storage.googleapis.com/exoplayer-test-media-0/shortform_3.mp4",
-                title = "My cat my cat"
-            ),
+            MediaItem.fromUri("https://bestvpn.org/html5demos/assets/dizzy.mp4"),
+            MediaItem.fromUri("https://storage.googleapis.com/exoplayer-test-media-1/gen-3/screens/dash-vod-single-segment/video-avc-baseline-480.mp4"),
+            MediaItem.fromUri("https://html5demos.com/assets/dizzy.mp4"),
+            MediaItem.fromUri("https://storage.googleapis.com/exoplayer-test-media-0/shortform_1.mp4"),
+            MediaItem.fromUri("https://storage.googleapis.com/exoplayer-test-media-0/shortform_2.mp4"),
+            MediaItem.fromUri("https://storage.googleapis.com/exoplayer-test-media-0/shortform_3.mp4"),
+            MediaItem.fromUri("https://storage.googleapis.com/exoplayer-test-media-0/shortform_4.mp4"),
         )
     }
 }
-
-data class MediaItem(
-    val url: String,
-    val title: String
-)
