@@ -2,8 +2,6 @@
 
 package com.densitech.scrollsmooth.ui.video
 
-import android.os.HandlerThread
-import android.os.Process
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,21 +13,20 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DefaultDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
-import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
-import com.densitech.scrollsmooth.ui.video.preFetch.MediaItemSource
-import com.densitech.scrollsmooth.ui.video.preFetch.MediaSourceManager
-import com.densitech.scrollsmooth.ui.video.preFetch.PlayerPool
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalFoundationApi::class)
@@ -37,65 +34,40 @@ import com.densitech.scrollsmooth.ui.video.preFetch.PlayerPool
 fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
 
     val context = LocalContext.current
+    var viewCounter by remember { mutableIntStateOf(0) }
+    val mediaItemSource = videoScreenViewModel.mediaItemSource.collectAsState()
+    val playerPool = videoScreenViewModel.playerPool.collectAsState()
 
-    var mediaItemDatabase: MediaItemSource? = remember {
-        null
+    val mediaList = remember {
+        mutableStateListOf<MediaItem>()
     }
 
-    val playbackThread: HandlerThread = remember {
-        HandlerThread("playback-thread", Process.THREAD_PRIORITY_AUDIO)
-    }
-
-    val loadControl: DefaultLoadControl = remember {
-        DefaultLoadControl()
-    }
-
-    val renderersFactory = remember {
-        DefaultRenderersFactory(context)
-    }
-
-    val playerPool: PlayerPool = remember {
-        PlayerPool(
-            10,
-            context,
-            playbackThread.looper,
-            loadControl,
-            renderersFactory,
-            DefaultBandwidthMeter.getSingletonInstance(context)
-        )
-    }
-
-    val mediaSourceManager: MediaSourceManager = remember {
-        MediaSourceManager(
-            DefaultMediaSourceFactory(DefaultDataSource.Factory(context)),
-            playbackThread.looper,
-            loadControl.allocator,
-            renderersFactory,
-            DefaultTrackSelector(context),
-            DefaultBandwidthMeter.getSingletonInstance(context)
-        )
-    }
-
-    var viewCounter = remember {
-        0
-    }
-
-    val playerList = videoScreenViewModel.playList.collectAsState()
     val pagerState = rememberPagerState(
         pageCount = {
-            playerList.value.size * 400
+            10000
         },
-        initialPage = (playerList.value.size * 400) / 2
+        initialPage = 5000
     )
 
     val fling = PagerDefaults.flingBehavior(
         state = pagerState,
-        pagerSnapDistance = PagerSnapDistance.atMost(10)
+        pagerSnapDistance = PagerSnapDistance.atMost(1)
     )
 
-    LaunchedEffect(playerList.value) {
-        if (playerList.value.isNotEmpty()) {
-            mediaItemDatabase = MediaItemSource(mediaItems = playerList.value)
+    LaunchedEffect(true) {
+        if (mediaItemSource.value?.mediaItems.isNullOrEmpty()) {
+            videoScreenViewModel.initData(context)
+        }
+    }
+
+    LaunchedEffect(mediaItemSource.value?.mediaItems) {
+        val mediaItems = mediaItemSource.value?.mediaItems
+        if (mediaItems != null) {
+            mediaList.clear()
+            mediaList.addAll(mediaItems)
+
+            // navigate to first item to trigger play again
+            videoScreenViewModel.play(0)
         }
     }
 
@@ -103,10 +75,17 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
         snapshotFlow {
             pagerState.currentPage
         }.collect { page ->
-            val mediaItemHorizon = page + mediaItemDatabase!!.rCacheSize
-            val reachableMediaItems = mediaItemDatabase?.get(page + 1, toIndex = mediaItemHorizon)
-            if (reachableMediaItems != null) {
-                mediaSourceManager.addAlls(reachableMediaItems)
+            if (mediaList.isNotEmpty()) {
+                val realPage = page % mediaList.count()
+                videoScreenViewModel.play(realPage)
+
+                if (mediaItemSource.value != null) {
+                    val mediaItemDatabase = mediaItemSource.value
+                    val mediaItemHorizon = page + mediaItemDatabase!!.rCacheSize
+                    val reachableMediaItems =
+                        mediaItemDatabase.get(page + 1, toIndex = mediaItemHorizon)
+                    videoScreenViewModel.addNewMediaItems(reachableMediaItems)
+                }
             }
         }
     }
@@ -119,27 +98,37 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
         ) {
             val screenHeight = maxHeight
 
-            VerticalPager(
-                state = pagerState,
-                modifier = Modifier.fillMaxSize(),
-                beyondBoundsPageCount = 1,
-                flingBehavior = fling
-            ) { page ->
-                val mediaList = mediaItemDatabase?.mediaItems ?: return@VerticalPager
+            if (mediaList.isNotEmpty()) {
+                VerticalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    beyondBoundsPageCount = 1,
+                    flingBehavior = fling
+                ) { page ->
+                    val realPage = page % mediaList.count()
+                    val mediaItem = mediaList[realPage]
+                    val mediaSource = videoScreenViewModel.getMediaSourceByMediaItem(mediaItem)
 
-                val realPage = page % mediaList.count()
-                val mediaItem = mediaList[realPage]
-                val mediaSource = mediaSourceManager[mediaItem]
+                    if (mediaSource == null || playerPool.value == null) {
+                        return@VerticalPager
+                    }
 
-                VideoItemView(
-                    viewCounter = viewCounter++,
-                    playerPool = playerPool,
-                    currentToken = realPage,
-                    currentMediaSource = mediaSource,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(screenHeight)
-                )
+                    VideoItemView(
+                        viewCounter = viewCounter++,
+                        playerPool = playerPool.value!!,
+                        currentToken = realPage,
+                        currentMediaSource = mediaSource,
+                        onPlayerReady = { token, exoPlayer ->
+                            videoScreenViewModel.onPlayerReady(token, exoPlayer)
+                        },
+                        onPlayerDestroy = { token ->
+                            videoScreenViewModel.onPlayerDestroy(token)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(screenHeight)
+                    )
+                }
             }
         }
     }

@@ -1,14 +1,10 @@
 package com.densitech.scrollsmooth.ui.video.preFetch
 
-import android.provider.MediaStore.Audio.Media
 import androidx.media3.common.MediaItem
-import java.util.HashSet
 
 class MediaItemSource(val mediaItems: List<MediaItem>) {
     var lCacheSize: Int = 2
     var rCacheSize: Int = 7
-
-
 
     private val slidingWindowCache = HashMap<Int, MediaItem>()
 

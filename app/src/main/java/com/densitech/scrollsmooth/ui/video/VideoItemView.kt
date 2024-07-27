@@ -2,18 +2,17 @@ package com.densitech.scrollsmooth.ui.video
 
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.preload.PreloadMediaSource
@@ -28,28 +27,16 @@ fun VideoItemView(
     playerPool: PlayerPool,
     currentToken: Int,
     currentMediaSource: PreloadMediaSource,
+    onPlayerReady: (Int, ExoPlayer?) -> Unit,
+    onPlayerDestroy: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-
-    var exoPlayer: ExoPlayer? = remember {
-        null
-    }
-
-    var isInView: Boolean = remember {
-        false
-    }
-
-    var token: Int = remember {
-        -1
-    }
-
-    var mediaSource: PreloadMediaSource? = remember {
-        null
-    }
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var isInView by remember { mutableStateOf(false) }
 
     fun releasePlayer(player: ExoPlayer?) {
-        playerPool.releasePlayer(token, player ?: exoPlayer)
+        playerPool.releasePlayer(currentToken, player ?: exoPlayer)
         exoPlayer = null
     }
 
@@ -63,9 +50,7 @@ fun VideoItemView(
 
             player.run {
                 repeatMode = ExoPlayer.REPEAT_MODE_ALL
-                mediaSource?.let {
-                    setMediaSource(it)
-                }
+                setMediaSource(currentMediaSource)
                 seekTo(currentPosition)
                 exoPlayer = player
                 player.prepare()
@@ -73,34 +58,39 @@ fun VideoItemView(
         }
     }
 
-
     DisposableEffect(true) {
-        mediaSource = currentMediaSource
-        token = currentToken
-
         isInView = true
         if (exoPlayer == null) {
-            playerPool.acquirePlayer(token, ::setupPlayer)
+            playerPool.acquirePlayer(currentToken, ::setupPlayer)
         }
 
+        onPlayerReady.invoke(currentToken, exoPlayer)
         Log.d("viewpager", "onViewAttachedToWindow: $viewCounter")
 
         onDispose {
             isInView = false
             releasePlayer(exoPlayer)
-            mediaSource?.preload(0)
+            currentMediaSource.preload(0)
             Log.d("viewpager", "onViewDetachedFromWindow: $viewCounter")
+            onPlayerDestroy.invoke(currentToken)
         }
     }
 
     AndroidView(modifier = modifier
-        .fillMaxHeight(),
+        .fillMaxHeight()
+        .clickable {
+            exoPlayer?.run {
+                playWhenReady = !playWhenReady
+            }
+        },
         factory = {
             PlayerView(context).apply {
-                player = exoPlayer
-                useController = true
+                useController = false
                 resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             }
+        },
+        update = {
+            it.player = exoPlayer
         })
 }
 

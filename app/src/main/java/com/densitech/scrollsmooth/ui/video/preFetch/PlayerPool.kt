@@ -120,7 +120,6 @@ class PlayerPool
         override fun createPlayer(): ExoPlayer {
             val player = ExoPlayer.Builder(context)
                 .setPlaybackLooper(playbackLooper)
-                .setLooper(playbackLooper)
                 .setLoadControl(loadControl)
                 .setRenderersFactory(renderersFactory)
                 .setBandwidthMeter(bandwidthMeter)
