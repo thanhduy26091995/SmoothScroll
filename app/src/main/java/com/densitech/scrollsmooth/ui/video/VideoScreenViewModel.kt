@@ -64,7 +64,7 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
                 .build()
 
         _playerPool.value = PlayerPool(
-            10,
+            3,
             context,
             playbackThread.looper,
             loadControl,
@@ -111,7 +111,6 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
     fun play(position: Int) {
         holderMap[position]?.let {
             _playerPool.value?.play(it)
-            println(it.mediaMetadata.title)
         }
     }
 }

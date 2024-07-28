@@ -46,7 +46,6 @@ class PlayerPool
                 callback.invoke(player)
                 return
             }
-
             // Add token to set of views requesting players
             playerRequestTokenSet.add(token)
             acquirePlayerInternal(token, callback)
@@ -57,15 +56,16 @@ class PlayerPool
         synchronized(playerMap) {
             if (!availablePlayerQueue.isEmpty()) {
                 val playerNumber = availablePlayerQueue.remove()
-                playerMap[playerNumber]?.let(callback)
+                playerMap[playerNumber]?.let { callback.invoke(it) }
                 playerRequestTokenSet.remove(token)
                 return
-            }
-
-            if (playerRequestTokenSet.contains(token)) {
+            } else if (playerRequestTokenSet.contains(token)) {
                 Handler(Looper.getMainLooper()).postDelayed({
-                    acquirePlayerInternal(token, callback)
-                }, 500)
+                    acquirePlayerInternal(
+                        token,
+                        callback
+                    )
+                }, 1000)
             }
         }
     }

@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalFoundationApi::class)
@@ -44,9 +45,9 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
 
     val pagerState = rememberPagerState(
         pageCount = {
-            10000
+            1000
         },
-        initialPage = 5000
+        initialPage = 0
     )
 
     val fling = PagerDefaults.flingBehavior(
@@ -65,25 +66,22 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
         if (mediaItems != null) {
             mediaList.clear()
             mediaList.addAll(mediaItems)
-
-            // navigate to first item to trigger play again
-            videoScreenViewModel.play(0)
         }
     }
 
     LaunchedEffect(pagerState) {
         snapshotFlow {
             pagerState.currentPage
-        }.collect { page ->
+        }.distinctUntilChanged().collect { page ->
             if (mediaList.isNotEmpty()) {
                 val realPage = page % mediaList.count()
                 videoScreenViewModel.play(realPage)
 
                 if (mediaItemSource.value != null) {
                     val mediaItemDatabase = mediaItemSource.value
-                    val mediaItemHorizon = page + mediaItemDatabase!!.rCacheSize
+                    val mediaItemHorizon = realPage + mediaItemDatabase!!.rCacheSize
                     val reachableMediaItems =
-                        mediaItemDatabase.get(page + 1, toIndex = mediaItemHorizon)
+                        mediaItemDatabase.get(realPage + 1, toIndex = mediaItemHorizon)
                     videoScreenViewModel.addNewMediaItems(reachableMediaItems)
                 }
             }
@@ -97,25 +95,27 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                 .fillMaxSize()
         ) {
             val screenHeight = maxHeight
+            // Compute the total page count outside of the VerticalPager composable
+            if (mediaList.size > 0) {
+                val totalPageCount = remember(mediaList) { mediaList.size }
 
-            if (mediaList.isNotEmpty()) {
                 VerticalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    beyondBoundsPageCount = 1,
+                    beyondBoundsPageCount = 0,
                     flingBehavior = fling
                 ) { page ->
-                    val realPage = page % mediaList.count()
-                    val mediaItem = mediaList[realPage]
+                    val realPage = page % totalPageCount
+                    val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
                     val mediaSource = videoScreenViewModel.getMediaSourceByMediaItem(mediaItem)
+                        ?: return@VerticalPager
 
-                    if (mediaSource == null || playerPool.value == null) {
-                        return@VerticalPager
-                    }
+                    // Ensure playerPool.value is not null
+                    val currentPlayerPool = playerPool.value ?: return@VerticalPager
 
                     VideoItemView(
                         viewCounter = viewCounter++,
-                        playerPool = playerPool.value!!,
+                        playerPool = currentPlayerPool,
                         currentToken = realPage,
                         currentMediaSource = mediaSource,
                         onPlayerReady = { token, exoPlayer ->

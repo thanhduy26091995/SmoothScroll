@@ -1,6 +1,5 @@
 package com.densitech.scrollsmooth.ui.video
 
-import android.util.Log
 import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -32,7 +31,7 @@ fun VideoItemView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
+    var exoPlayer: ExoPlayer? by remember { mutableStateOf(null) }
     var isInView by remember { mutableStateOf(false) }
 
     fun releasePlayer(player: ExoPlayer?) {
@@ -45,44 +44,44 @@ fun VideoItemView(
             releasePlayer(player)
         } else {
             if (player != exoPlayer) {
-                releasePlayer(player)
+                releasePlayer(exoPlayer)
             }
 
             player.run {
-                repeatMode = ExoPlayer.REPEAT_MODE_ALL
+                repeatMode = ExoPlayer.REPEAT_MODE_ONE
                 setMediaSource(currentMediaSource)
-                seekTo(currentPosition)
+                prepare()
                 exoPlayer = player
-                player.prepare()
+
+                // Notify that player is ready, then add to holder map
+                onPlayerReady(currentToken, exoPlayer)
             }
         }
     }
 
-    DisposableEffect(true) {
+    DisposableEffect(currentToken) {
         isInView = true
         if (exoPlayer == null) {
             playerPool.acquirePlayer(currentToken, ::setupPlayer)
+        } else {
+            // Notify that player is ready, then add to holder map
+            onPlayerReady(currentToken, exoPlayer)
         }
-
-        onPlayerReady.invoke(currentToken, exoPlayer)
-        Log.d("viewpager", "onViewAttachedToWindow: $viewCounter")
 
         onDispose {
             isInView = false
             releasePlayer(exoPlayer)
             currentMediaSource.preload(0)
-            Log.d("viewpager", "onViewDetachedFromWindow: $viewCounter")
-            onPlayerDestroy.invoke(currentToken)
+            onPlayerDestroy(currentToken)
         }
     }
 
-    AndroidView(modifier = modifier
-        .fillMaxHeight()
-        .clickable {
-            exoPlayer?.run {
-                playWhenReady = !playWhenReady
-            }
-        },
+    AndroidView(
+        modifier = modifier
+            .fillMaxHeight()
+            .clickable {
+                exoPlayer?.run { playWhenReady = !playWhenReady }
+            },
         factory = {
             PlayerView(context).apply {
                 useController = false
@@ -91,6 +90,6 @@ fun VideoItemView(
         },
         update = {
             it.player = exoPlayer
-        })
+        }
+    )
 }
-
