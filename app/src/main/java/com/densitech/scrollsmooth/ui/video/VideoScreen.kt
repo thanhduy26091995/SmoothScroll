@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -66,6 +67,10 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
         if (mediaItems != null) {
             mediaList.clear()
             mediaList.addAll(mediaItems)
+
+            // Run the first item after delay 500ms
+            delay(500)
+            videoScreenViewModel.play(0)
         }
     }
 
