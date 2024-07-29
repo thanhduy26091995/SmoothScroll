@@ -16,11 +16,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,7 +33,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
 
     val context = LocalContext.current
-    var viewCounter by remember { mutableIntStateOf(0) }
     val mediaItemSource = videoScreenViewModel.mediaItemSource.collectAsState()
     val playerPool = videoScreenViewModel.playerPool.collectAsState()
 
@@ -53,7 +49,8 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
 
     val fling = PagerDefaults.flingBehavior(
         state = pagerState,
-        pagerSnapDistance = PagerSnapDistance.atMost(1)
+        pagerSnapDistance = PagerSnapDistance.atMost(1),
+        snapPositionalThreshold = 0.3f
     )
 
     LaunchedEffect(true) {
@@ -111,6 +108,7 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                     flingBehavior = fling
                 ) { page ->
                     val realPage = page % totalPageCount
+                    println("realPage: $realPage")
                     val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
                     val mediaSource = videoScreenViewModel.getMediaSourceByMediaItem(mediaItem)
                         ?: return@VerticalPager
@@ -119,7 +117,6 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                     val currentPlayerPool = playerPool.value ?: return@VerticalPager
 
                     VideoItemView(
-                        viewCounter = viewCounter++,
                         playerPool = currentPlayerPool,
                         currentToken = realPage,
                         currentMediaSource = mediaSource,

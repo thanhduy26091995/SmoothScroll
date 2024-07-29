@@ -100,11 +100,11 @@ class MediaSourceManager(
 
     private class PreloadControlImpl(private val targetPreloadPositionUs: Long) :
         PreloadMediaSource.PreloadControl {
-        override fun onTimelineRefreshed(mediaSource: PreloadMediaSource): Boolean {
+        override fun onSourcePrepared(mediaSource: PreloadMediaSource): Boolean {
             return true
         }
 
-        override fun onPrepared(mediaSource: PreloadMediaSource): Boolean {
+        override fun onTracksSelected(mediaSource: PreloadMediaSource): Boolean {
             return true
         }
 
@@ -113,6 +113,10 @@ class MediaSourceManager(
             bufferedPositionUs: Long
         ): Boolean {
             return bufferedPositionUs < targetPreloadPositionUs
+        }
+
+        override fun onUsedByPlayer(mediaSource: PreloadMediaSource) {
+
         }
     }
 }
