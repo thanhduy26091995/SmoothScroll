@@ -18,14 +18,13 @@ import java.util.LinkedList
 import java.util.Queue
 
 @SuppressLint("UnsafeOptInUsageError")
-class PlayerPool
-    (
+class PlayerPool (
     private val numberOfPlayers: Int,
-    private val context: Context,
-    private val playbackLooper: Looper,
-    private val loadControl: LoadControl,
-    private val renderersFactory: RenderersFactory,
-    private val bandwidthMeter: BandwidthMeter
+    context: Context,
+    playbackLooper: Looper,
+    loadControl: LoadControl,
+    renderersFactory: RenderersFactory,
+    bandwidthMeter: BandwidthMeter
 ) {
     /** Creates a player instance to be used by the pool. */
     interface PlayerFactory {
@@ -40,12 +39,6 @@ class PlayerPool
 
     fun acquirePlayer(token: Int, callback: (ExoPlayer) -> Unit) {
         synchronized(playerMap) {
-            if (playerMap.size < numberOfPlayers) {
-                val player = playerFactory.createPlayer()
-                playerMap[playerMap.size] = player
-                callback.invoke(player)
-                return
-            }
             // Add token to set of views requesting players
             playerRequestTokenSet.add(token)
             acquirePlayerInternal(token, callback)
@@ -59,13 +52,19 @@ class PlayerPool
                 playerMap[playerNumber]?.let { callback.invoke(it) }
                 playerRequestTokenSet.remove(token)
                 return
+            } else if (playerMap.size < numberOfPlayers) {
+                val player = playerFactory.createPlayer()
+                playerMap[playerMap.size] = player
+                callback.invoke(player)
+                playerRequestTokenSet.remove(token)
+                return
             } else if (playerRequestTokenSet.contains(token)) {
                 Handler(Looper.getMainLooper()).postDelayed({
                     acquirePlayerInternal(
                         token,
                         callback
                     )
-                }, 1000)
+                }, 500)
             }
         }
     }
@@ -100,7 +99,7 @@ class PlayerPool
         }
     }
 
-    fun pauseAllPlayer(keepOnGoingPlayer: Player? = null) {
+    private fun pauseAllPlayer(keepOnGoingPlayer: Player? = null) {
         playerMap.values.forEach {
             if (it != keepOnGoingPlayer) {
                 it.pause()

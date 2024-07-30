@@ -78,14 +78,6 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
             if (mediaList.isNotEmpty()) {
                 val realPage = page % mediaList.count()
                 videoScreenViewModel.play(realPage)
-
-                if (mediaItemSource.value != null) {
-                    val mediaItemDatabase = mediaItemSource.value
-                    val mediaItemHorizon = realPage + mediaItemDatabase!!.rCacheSize
-                    val reachableMediaItems =
-                        mediaItemDatabase.get(realPage + 1, toIndex = mediaItemHorizon)
-                    videoScreenViewModel.addNewMediaItems(reachableMediaItems)
-                }
             }
         }
     }
@@ -110,8 +102,9 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                     val realPage = page % totalPageCount
                     println("realPage: $realPage")
                     val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
-                    val mediaSource = videoScreenViewModel.getMediaSourceByMediaItem(mediaItem)
-                        ?: return@VerticalPager
+                    val mediaSource =
+                        videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
+                            ?: return@VerticalPager
 
                     // Ensure playerPool.value is not null
                     val currentPlayerPool = playerPool.value ?: return@VerticalPager
