@@ -49,8 +49,8 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
         private const val LOAD_CONTROL_MAX_BUFFER_MS = 20_000
         private const val LOAD_CONTROL_BUFFER_FOR_PLAYBACK_MS = 500
         private const val MANAGED_ITEM_COUNT = 10
-        private const val ITEM_ADD_REMOVE_COUNT = 4
-        private const val NUMBER_OF_PLAYERS = 5
+        private const val ITEM_ADD_REMOVE_COUNT = 10
+        private const val NUMBER_OF_PLAYERS = 10
     }
 
     private val playbackThread: HandlerThread =
@@ -165,6 +165,7 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun play(position: Int) {
+        println(holderMap.map { it.key })
         currentPlayingIndex = position
         holderMap[position]?.let {
             _playerPool.value?.play(it)

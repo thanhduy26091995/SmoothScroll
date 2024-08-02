@@ -74,8 +74,10 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
     LaunchedEffect(pagerState) {
         snapshotFlow {
             pagerState.currentPage
-        }.distinctUntilChanged().collect { page ->
+        }.collect { page ->
             if (mediaList.isNotEmpty()) {
+                println("PAGE CHANGE ON SNAPSHOT: ${page % mediaList.count()}")
+
                 val realPage = page % mediaList.count()
                 videoScreenViewModel.play(realPage)
             }
@@ -96,7 +98,7 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                 VerticalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    beyondBoundsPageCount = 0,
+                    beyondBoundsPageCount = 2,
                     flingBehavior = fling
                 ) { page ->
                     val realPage = page % totalPageCount

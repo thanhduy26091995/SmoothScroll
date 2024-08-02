@@ -11,9 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import com.densitech.scrollsmooth.ui.video.preFetch.PlayerPool
 
 @OptIn(UnstableApi::class)
@@ -50,7 +53,8 @@ fun VideoItemView(
                 exoPlayer = player
                 prepare()
                 // Notify that player is ready, then add to holder map
-                onPlayerReady(currentToken, exoPlayer)
+                onPlayerReady(currentToken, player)
+                println("ON PLAYER READY: ${currentToken} -- ${player.isLoading} -- ${player.isPlaying}")
             }
         }
     }
@@ -71,32 +75,20 @@ fun VideoItemView(
         }
     }
 
-    if (exoPlayer != null) {
-        PlayerSurface(
-            player = exoPlayer!!,
-            surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-            modifier = modifier
-                .fillMaxHeight()
-                .clickable {
-                    exoPlayer?.run { playWhenReady = !playWhenReady }
-                })
-    }
-
-
-//    AndroidView(
-//        modifier = modifier
-//            .fillMaxHeight()
-//            .clickable {
-//                exoPlayer?.run { playWhenReady = !playWhenReady }
-//            },
-//        factory = {
-//            PlayerView(context).apply {
-//                useController = false
-//                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-//            }
-//        },
-//        update = {
-//            it.player = exoPlayer
-//        }
-//    )
+    AndroidView(
+        modifier = modifier
+            .fillMaxHeight()
+            .clickable {
+                exoPlayer?.run { playWhenReady = !playWhenReady }
+            },
+        factory = {
+            PlayerView(context).apply {
+                useController = false
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
+        },
+        update = {
+            it.player = exoPlayer
+        }
+    )
 }
