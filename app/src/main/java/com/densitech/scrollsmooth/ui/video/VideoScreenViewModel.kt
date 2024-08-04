@@ -40,7 +40,8 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
 
     private lateinit var preloadManager: DefaultPreloadManager
     private val currentMediaItemsAndIndexes: ArrayDeque<Pair<MediaItem, Int>> = ArrayDeque()
-     val holderMap: MutableMap<Int, ExoPlayer> = mutableMapOf()
+    val holderMap: MutableMap<Int, ExoPlayer> = mutableMapOf()
+    private val holderRatioMap: MutableMap<Int, Pair<Int, Int>> = mutableMapOf()
     private var currentPlayingIndex: Int = C.INDEX_UNSET
 
     companion object {
@@ -48,9 +49,9 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
         private const val LOAD_CONTROL_MIN_BUFFER_MS = 5_000
         private const val LOAD_CONTROL_MAX_BUFFER_MS = 20_000
         private const val LOAD_CONTROL_BUFFER_FOR_PLAYBACK_MS = 500
-        private const val MANAGED_ITEM_COUNT = 10
-        private const val ITEM_ADD_REMOVE_COUNT = 10
-        private const val NUMBER_OF_PLAYERS = 10
+        private const val MANAGED_ITEM_COUNT = 3
+        private const val ITEM_ADD_REMOVE_COUNT = 3
+        private const val NUMBER_OF_PLAYERS = 3
     }
 
     private val playbackThread: HandlerThread =
@@ -135,6 +136,15 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
         return mediaSource
     }
 
+    fun onReceiveRatio(token: Int, width: Int, height: Int) {
+        holderRatioMap[token] = Pair(width, height)
+    }
+
+    fun getCurrentRatio(token: Int): Pair<Int, Int> {
+        val currentValue = holderRatioMap[token] ?: return Pair(1080, 1920)
+        return currentValue
+    }
+
     fun onPlayerReady(token: Int, exoPlayer: ExoPlayer?) {
         exoPlayer?.let {
             holderMap[token] = exoPlayer
@@ -165,7 +175,6 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun play(position: Int) {
-        println(holderMap.map { it.key })
         currentPlayingIndex = position
         holderMap[position]?.let {
             _playerPool.value?.play(it)

@@ -5,8 +5,6 @@ package com.densitech.scrollsmooth.ui.video
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerSnapDistance
@@ -25,7 +23,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalFoundationApi::class)
@@ -76,8 +73,6 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
             pagerState.currentPage
         }.collect { page ->
             if (mediaList.isNotEmpty()) {
-                println("PAGE CHANGE ON SNAPSHOT: ${page % mediaList.count()}")
-
                 val realPage = page % mediaList.count()
                 videoScreenViewModel.play(realPage)
             }
@@ -98,11 +93,10 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                 VerticalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    beyondBoundsPageCount = 2,
+                    beyondBoundsPageCount = 0,
                     flingBehavior = fling
                 ) { page ->
                     val realPage = page % totalPageCount
-                    println("realPage: $realPage")
                     val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
                     val mediaSource =
                         videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
@@ -115,15 +109,18 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                         playerPool = currentPlayerPool,
                         currentToken = realPage,
                         currentMediaSource = mediaSource,
+                        currentRatio = videoScreenViewModel.getCurrentRatio(realPage),
                         onPlayerReady = { token, exoPlayer ->
                             videoScreenViewModel.onPlayerReady(token, exoPlayer)
                         },
                         onPlayerDestroy = { token ->
                             videoScreenViewModel.onPlayerDestroy(token)
                         },
+                        onReceiveRatio = { token, width, height ->
+                            videoScreenViewModel.onReceiveRatio(token, width, height)
+                        },
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(screenHeight)
+                            .fillMaxSize()
                     )
                 }
             }
