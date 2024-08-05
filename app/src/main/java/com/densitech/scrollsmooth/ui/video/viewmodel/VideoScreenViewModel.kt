@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video
+package com.densitech.scrollsmooth.ui.video.viewmodel
 
 import android.content.Context
 import android.os.HandlerThread
@@ -42,16 +42,17 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
     private val currentMediaItemsAndIndexes: ArrayDeque<Pair<MediaItem, Int>> = ArrayDeque()
     val holderMap: MutableMap<Int, ExoPlayer> = mutableMapOf()
     private val holderRatioMap: MutableMap<Int, Pair<Int, Int>> = mutableMapOf()
-    private var currentPlayingIndex: Int = C.INDEX_UNSET
+    var currentPlayingIndex: Int = C.INDEX_UNSET
+        private set
 
     companion object {
         private const val TAG = "VideoScreenViewModel"
         private const val LOAD_CONTROL_MIN_BUFFER_MS = 5_000
         private const val LOAD_CONTROL_MAX_BUFFER_MS = 20_000
         private const val LOAD_CONTROL_BUFFER_FOR_PLAYBACK_MS = 500
-        private const val MANAGED_ITEM_COUNT = 3
-        private const val ITEM_ADD_REMOVE_COUNT = 3
-        private const val NUMBER_OF_PLAYERS = 3
+        private const val MANAGED_ITEM_COUNT = 5
+        private const val ITEM_ADD_REMOVE_COUNT = 5
+        private const val NUMBER_OF_PLAYERS = 5
     }
 
     private val playbackThread: HandlerThread =
@@ -141,7 +142,7 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun getCurrentRatio(token: Int): Pair<Int, Int> {
-        val currentValue = holderRatioMap[token] ?: return Pair(1080, 1920)
+        val currentValue = holderRatioMap[token] ?: return Pair(0, 0)
         return currentValue
     }
 
