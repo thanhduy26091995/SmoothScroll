@@ -6,27 +6,39 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
@@ -38,6 +50,7 @@ import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
 import com.densitech.scrollsmooth.ui.video.preFetch.PlayerPool
 import kotlinx.coroutines.delay
+import java.util.Locale
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -57,6 +70,9 @@ fun VideoItemView(
     var isInView by remember { mutableStateOf(false) }
     var isPause by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableFloatStateOf(0F) }
+    var isDraggingSlider by remember { mutableStateOf(false) }
+    var heightOfSlider by remember { mutableStateOf(2.dp) }
+    var onTempSliderPosition by remember { mutableLongStateOf(0) }
 
     val videoListener = object : Player.Listener {
         override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -152,12 +168,33 @@ fun VideoItemView(
                 )
             }
 
+            if (isDraggingSlider && exoPlayer != null) {
+                SeekingTimeView(
+                    currentPosition = onTempSliderPosition,
+                    duration = exoPlayer!!.duration,
+                    modifier = Modifier
+                        .padding(bottom = 30.dp)
+                        .align(
+                            Alignment.BottomCenter
+                        )
+                )
+            }
+
             PositionView(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .height(heightOfSlider)
                     .align(Alignment.BottomCenter),
                 currentValue = currentPosition, onValueChange = {
                     exoPlayer?.seekTo((it * exoPlayer!!.duration).toLong())
+                },
+                onDraggedSlider = { isDragged ->
+                    isDraggingSlider = isDragged
+                    heightOfSlider = if (isDragged) 30.dp else 2.dp
+                },
+                onTempSliderPositionChange = {
+                    onTempSliderPosition = it.toLong()
+                    println(onTempSliderPosition)
                 })
         }
     }
@@ -194,31 +231,73 @@ fun VideoPlayer(
     )
 }
 
-@Composable
-@Preview
-fun PreviewDuration() {
-    PositionView(currentValue = 0.5f, onValueChange = {
-
-    })
-}
-
-
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PositionView(
     currentValue: Float,
     onValueChange: (Float) -> Unit,
+    onDraggedSlider: (Boolean) -> Unit,
+    onTempSliderPositionChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sliderPosition = remember(currentValue) { mutableFloatStateOf(currentValue) }
+    val tempSliderPosition = remember { mutableFloatStateOf(currentValue) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isDragged = interactionSource.collectIsDraggedAsState()
+
     val animatedSliderValue by animateFloatAsState(
-        targetValue = currentValue,
+        targetValue = sliderPosition.floatValue,
         animationSpec = tween(durationMillis = 100), label = "Smooth"
     )
 
+    LaunchedEffect(isDragged.value) {
+        onDraggedSlider.invoke(isDragged.value)
+    }
+
     Slider(
         modifier = modifier,
-        value = animatedSliderValue,
-        onValueChange = {
-            onValueChange(it)
-        }
+        onValueChange = { progress ->
+            sliderPosition.floatValue = progress
+            tempSliderPosition.floatValue = progress
+
+            onTempSliderPositionChange.invoke(tempSliderPosition.floatValue)
+        },
+        thumb = {
+
+        },
+        value = if (isDragged.value) tempSliderPosition.floatValue else animatedSliderValue,
+        onValueChangeFinished = {
+            sliderPosition.floatValue = tempSliderPosition.floatValue
+            onValueChange(tempSliderPosition.floatValue)
+        },
+        interactionSource = interactionSource,
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color.White,
+            inactiveTickColor = Color.Gray
+        )
     )
+}
+
+@Composable
+fun SeekingTimeView(currentPosition: Long, duration: Long, modifier: Modifier = Modifier) {
+    val timeFormat = "%02d:%02d"
+
+    fun formatTime(timeInSeconds: Long): String {
+        val minutes = timeInSeconds / 60
+        val seconds = timeInSeconds % 60
+        return String.format(Locale.getDefault(), timeFormat, minutes, seconds)
+    }
+
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(text = formatTime(currentPosition), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+
+        Spacer(modifier = Modifier.width(5.dp))
+
+        Text(text = " / ", fontSize = 16.sp)
+
+        Spacer(modifier = Modifier.width(5.dp))
+
+        Text(text = formatTime(duration), fontSize = 28.sp, fontWeight = FontWeight.Bold)
+    }
 }

@@ -12,10 +12,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.tooling.preview.Preview
 import com.densitech.scrollsmooth.ui.main.MainScreen
 import com.densitech.scrollsmooth.ui.theme.ScrollSmoothTheme
-import com.densitech.scrollsmooth.ui.video.view.VideoScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,14 +29,6 @@ class MainActivity : ComponentActivity() {
                 MainScreen()
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ScrollSmoothTheme {
-        VideoScreen()
     }
 }
 

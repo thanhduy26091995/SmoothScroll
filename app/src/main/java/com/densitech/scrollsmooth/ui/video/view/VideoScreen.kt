@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
+fun VideoScreen(videoScreenViewModel: VideoScreenViewModel) {
 
     val context = LocalContext.current
     val mediaItemSource = videoScreenViewModel.mediaItemSource.collectAsState()
