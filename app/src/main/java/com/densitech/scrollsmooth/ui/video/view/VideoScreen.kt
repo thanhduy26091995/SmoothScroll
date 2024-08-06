@@ -131,7 +131,6 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
                     },
                     modifier = Modifier
                         .fillMaxSize()
-                        .height(screenHeight)
                 )
             }
         }
