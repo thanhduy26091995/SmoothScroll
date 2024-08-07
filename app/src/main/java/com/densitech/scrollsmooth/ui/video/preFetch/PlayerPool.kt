@@ -5,20 +5,29 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.Player
+import androidx.media3.common.util.Util
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.RenderersFactory
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.BandwidthMeter
 import androidx.media3.exoplayer.util.EventLogger
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.Maps
+import okhttp3.OkHttpClient
+import java.io.File
 import java.util.Collections
 import java.util.LinkedList
 import java.util.Queue
 
 @SuppressLint("UnsafeOptInUsageError")
-class PlayerPool (
+class PlayerPool(
     private val numberOfPlayers: Int,
     context: Context,
     playbackLooper: Looper,
@@ -117,11 +126,35 @@ class PlayerPool (
         private var playerCounter = 0
 
         override fun createPlayer(): ExoPlayer {
+            val databaseProvider = StandaloneDatabaseProvider(context)
+            val cacheDir = File(Util.createTempFile(context, "CacheDir"), "cache")
+            val maxBytes = 50 * 1024 * 1024L
+            val cache =
+                SimpleCache(cacheDir, LeastRecentlyUsedCacheEvictor(maxBytes), databaseProvider)
+            // OK HTTP
+            val okHttpClient = OkHttpClient.Builder().build()
+            // Create an OkHttpDataSource.Factory instance
+            val okHttpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+
+            // Cronet
+//            val cronetEngine = CronetEngine.Builder(context).build()
+//            val cronetDataSourceFactory = CronetData
+
+
+            val cacheDataSourceFactory = CacheDataSource.Factory()
+                .setCache(cache)
+                .setUpstreamDataSourceFactory(okHttpDataSourceFactory)
+
             val player = ExoPlayer.Builder(context)
                 .setPlaybackLooper(playbackLooper)
                 .setLoadControl(loadControl)
                 .setRenderersFactory(renderersFactory)
                 .setBandwidthMeter(bandwidthMeter)
+                .setMediaSourceFactory(
+                    DefaultMediaSourceFactory(context).setDataSourceFactory(
+                        cacheDataSourceFactory
+                    )
+                )
                 .build()
             player.addAnalyticsListener(EventLogger("player-${playerCounter}"))
             playerCounter++
