@@ -2,15 +2,16 @@
 
 package com.densitech.scrollsmooth.ui.video.view
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.pager.PagerDefaults
-import androidx.compose.foundation.pager.PagerSnapDistance
-import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,7 +57,8 @@ fun VideoScreen(videoScreenViewModel: VideoScreenViewModel) {
     val fling = PagerDefaults.flingBehavior(
         state = pagerState,
         pagerSnapDistance = PagerSnapDistance.atMost(1),
-        snapPositionalThreshold = 0.3f
+        snapPositionalThreshold = 0.8f,
+        snapAnimationSpec = spring(stiffness = Spring.StiffnessMediumLow)
     )
 
     LaunchedEffect(true) {

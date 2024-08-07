@@ -40,19 +40,20 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
 
     private lateinit var preloadManager: DefaultPreloadManager
     private val currentMediaItemsAndIndexes: ArrayDeque<Pair<MediaItem, Int>> = ArrayDeque()
-    val holderMap: MutableMap<Int, ExoPlayer> = mutableMapOf()
+    private val holderMap: MutableMap<Int, ExoPlayer> = mutableMapOf()
     private val holderRatioMap: MutableMap<Int, Pair<Int, Int>> = mutableMapOf()
     var currentPlayingIndex: Int = C.INDEX_UNSET
         private set
 
     companion object {
         private const val TAG = "VideoScreenViewModel"
-        private const val LOAD_CONTROL_MIN_BUFFER_MS = 5_000
+        private const val LOAD_CONTROL_MIN_BUFFER_MS = 20_000
         private const val LOAD_CONTROL_MAX_BUFFER_MS = 20_000
-        private const val LOAD_CONTROL_BUFFER_FOR_PLAYBACK_MS = 500
+        private const val LOAD_CONTROL_BUFFER_FOR_PLAYBACK_MS = 2500
+        private const val LOAD_CONTROL_BUFFER_FOR_PLAYBACK_AFTER_RE_BUFFER = 1000
         private const val MANAGED_ITEM_COUNT = 5
         private const val ITEM_ADD_REMOVE_COUNT = 5
-        private const val NUMBER_OF_PLAYERS = 5
+        private const val NUMBER_OF_PLAYERS = 10
     }
 
     private val playbackThread: HandlerThread =
@@ -91,7 +92,7 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
                     LOAD_CONTROL_MIN_BUFFER_MS,
                     LOAD_CONTROL_MAX_BUFFER_MS,
                     LOAD_CONTROL_BUFFER_FOR_PLAYBACK_MS,
-                    DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS
+                    LOAD_CONTROL_BUFFER_FOR_PLAYBACK_AFTER_RE_BUFFER
                 )
                 .setPrioritizeTimeOverSizeThresholds(true)
                 .build()
