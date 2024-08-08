@@ -31,12 +31,12 @@ media3-exo-player = { module = "androidx.media3:media3-exoplayer", version.ref =
 media3-exo-ui = { module = "androidx.media3:media3-ui", version.ref = "media3Exo" }
 media3-exo-dashplayer = { module = "androidx.media3:media3-exoplayer-dash", version.ref = "media3Exo" }
 media3-exo-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3Exo" }
-media3-exo-cronet = { module = "androidx.media3:media3-datasource-cronet", version.ref = "media3ExoCronet" }
+media3-exo-cronet = { module = "androidx.media3:media3-datasource-cronet", version.ref = "media3Exo" }
 
 hilt-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltCompose" }
 
 [bundles]
-media3-bundles = ["media3-exo-player", "media3-exo-dashplayer", "media3-exo-okhttp", "media3-exo-ui"]
+media3-bundles = ["media3-exo-player", "media3-exo-dashplayer", "media3-exo-okhttp", "media3-exo-ui", "media3-exo-cronet"]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

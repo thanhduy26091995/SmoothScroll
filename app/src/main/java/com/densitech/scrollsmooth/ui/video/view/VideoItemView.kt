@@ -2,15 +2,33 @@ package com.densitech.scrollsmooth.ui.video.view
 
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -164,21 +182,24 @@ fun VideoItemView(
                 )
             }
 
-            PositionView(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(heightOfSlider)
-                    .align(Alignment.BottomCenter),
-                currentValue = currentPosition, onValueChange = {
-                    exoPlayer?.seekTo((it * exoPlayer!!.duration).toLong())
-                },
-                onDraggedSlider = { isDragged ->
-                    isDraggingSlider = isDragged
-                    heightOfSlider = if (isDragged) 30.dp else 2.dp
-                },
-                onTempSliderPositionChange = { loadPercent ->
-                    onSeekingCurrentDuration = (loadPercent * it.duration).toLong()
-                })
+            // 30s
+            if (it.duration >= 30000) {
+                PositionView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(heightOfSlider)
+                        .align(Alignment.BottomCenter),
+                    currentValue = currentPosition, onValueChange = {
+                        exoPlayer?.seekTo((it * exoPlayer!!.duration).toLong())
+                    },
+                    onDraggedSlider = { isDragged ->
+                        isDraggingSlider = isDragged
+                        heightOfSlider = if (isDragged) 30.dp else 2.dp
+                    },
+                    onTempSliderPositionChange = { loadPercent ->
+                        onSeekingCurrentDuration = (loadPercent * it.duration).toLong()
+                    })
+            }
         }
     }
 }
@@ -228,14 +249,14 @@ fun PositionView(
     val interactionSource = remember { MutableInteractionSource() }
     val isDragged = interactionSource.collectIsDraggedAsState()
 
-    val animatedSliderValue by animateFloatAsState(
-        targetValue = sliderPosition.floatValue,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "Slider"
-    )
+//    val animatedSliderValue by animateFloatAsState(
+//        targetValue = sliderPosition.floatValue,
+//        animationSpec = spring(
+//            dampingRatio = Spring.DampingRatioLowBouncy,
+//            stiffness = Spring.StiffnessLow
+//        ),
+//        label = "Slider"
+//    )
 
     LaunchedEffect(isDragged.value) {
         onDraggedSlider.invoke(isDragged.value)
@@ -252,7 +273,7 @@ fun PositionView(
         thumb = {
 
         },
-        value = if (isDragged.value) tempSliderPosition.floatValue else animatedSliderValue,
+        value = if (isDragged.value) tempSliderPosition.floatValue else sliderPosition.floatValue,
         onValueChangeFinished = {
             sliderPosition.floatValue = tempSliderPosition.floatValue
             onValueChange(tempSliderPosition.floatValue)
