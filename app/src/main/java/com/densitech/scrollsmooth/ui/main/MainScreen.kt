@@ -1,27 +1,17 @@
+@file:kotlin.OptIn(ExperimentalFoundationApi::class)
+
 package com.densitech.scrollsmooth.ui.main
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +31,13 @@ import kotlinx.coroutines.flow.emptyFlow
 fun MainScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabTitles = listOf(TabItem.HOME, TabItem.SEARCH, TabItem.ADD, TabItem.PROFILE)
+
+    val homeVideoPagerState = rememberPagerState(
+        pageCount = {
+            1000
+        },
+        initialPage = 0
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -65,7 +62,7 @@ fun MainScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
         }) { innerPadding ->
         Box(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
             when (selectedTabIndex) {
-                0 -> VideoScreen(videoScreenViewModel)
+                0 -> VideoScreen(homeVideoPagerState, videoScreenViewModel)
                 1 -> TabContent("Content for Tab 2")
             }
         }
