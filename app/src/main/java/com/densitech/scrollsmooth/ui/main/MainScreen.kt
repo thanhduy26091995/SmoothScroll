@@ -63,7 +63,9 @@ fun MainScreen(videoScreenViewModel: VideoScreenViewModel = hiltViewModel()) {
         Box(modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())) {
             when (selectedTabIndex) {
                 0 -> VideoScreen(homeVideoPagerState, videoScreenViewModel)
-                1 -> TabContent("Content for Tab 2")
+                1 -> TabContent("Coming soon")
+                2 -> TabContent("Coming soon")
+                3 -> TabContent("Coming soon")
             }
         }
     }
@@ -111,15 +113,19 @@ fun TabItemView(tabItem: TabItem, index: Int, isSelected: Boolean, onItemClick: 
 
 @Composable
 fun TabContent(content: String) {
-    Surface(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Red)
-    ) {
-        Text(
-            text = content,
-            fontSize = 24.sp,
-            modifier = Modifier.padding(16.dp)
-        )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(maxHeight)
+        ) {
+            Text(
+                text = content,
+                fontSize = 24.sp,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.Center)
+            )
+        }
     }
 }
