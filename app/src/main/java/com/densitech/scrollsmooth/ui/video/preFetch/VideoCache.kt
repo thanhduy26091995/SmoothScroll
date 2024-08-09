@@ -28,7 +28,7 @@ object CacheSingleton {
                 throw IllegalStateException("Failed to create cache directory: ${cacheDir.absolutePath}")
             }
         }
-        val maxBytes = 100 * 1024 * 1024L // 100MB
+        val maxBytes = 100 * 1024 * 1024L // 300MB
         return SimpleCache(cacheDir, LeastRecentlyUsedCacheEvictor(maxBytes), databaseProvider)
     }
 

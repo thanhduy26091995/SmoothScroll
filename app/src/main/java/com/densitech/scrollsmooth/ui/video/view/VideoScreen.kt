@@ -2,6 +2,7 @@
 
 package com.densitech.scrollsmooth.ui.video.view
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -9,16 +10,32 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -34,6 +51,9 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
     val screenState = videoScreenViewModel.screenState.collectAsState()
     var currentActiveIndex by remember {
         mutableIntStateOf(videoScreenViewModel.currentPlayingIndex)
+    }
+    var isPause by remember {
+        mutableStateOf(false)
     }
 
     val mediaList = remember {
@@ -81,6 +101,8 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                 val realPage = page % mediaList.count()
                 currentActiveIndex = realPage
                 videoScreenViewModel.play(realPage)
+
+                isPause = false
             }
         }
     }
@@ -132,8 +154,25 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                         onReceiveRatio = { token, width, height ->
                             videoScreenViewModel.onReceiveRatio(token, width, height)
                         },
+                        onPauseClick = {
+                            isPause = it
+                        },
                         modifier = Modifier
                             .fillMaxSize()
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = isPause,
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_play_arrow_24),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .align(Alignment.Center)
+                            .alpha(0.2f),
                     )
                 }
             }

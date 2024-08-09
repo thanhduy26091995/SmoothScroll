@@ -93,42 +93,6 @@ class VideoScreenViewModel @Inject constructor() : ViewModel() {
             height = 1440.0
         ),
         MediaInfo(
-            url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_5.mp4",
-            bitrate = 87.887,
-            width = 720.0,
-            height = 480.0
-        ),
-        MediaInfo(
-            url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_6.mp4",
-            bitrate = 19872.153,
-            width = 1920.0,
-            height = 1080.0
-        ),
-        MediaInfo(
-            url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_7.mp4",
-            bitrate = 19614.623,
-            width = 1920.0,
-            height = 1080.0
-        ),
-        MediaInfo(
-            url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_8.mp4",
-            bitrate = 19666.184,
-            width = 1920.0,
-            height = 1080.0
-        ),
-        MediaInfo(
-            url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_9.mp4",
-            bitrate = 19674.894,
-            width = 1920.0,
-            height = 1080.0
-        ),
-        MediaInfo(
-            url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_10.mp4",
-            bitrate = 29684.915,
-            width = 1920.0,
-            height = 1080.0
-        ),
-        MediaInfo(
             url = "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_11.mp4",
             bitrate = 13639.752,
             width = 2560.0,
