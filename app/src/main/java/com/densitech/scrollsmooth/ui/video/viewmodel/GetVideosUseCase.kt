@@ -1,5 +1,6 @@
 package com.densitech.scrollsmooth.ui.video.viewmodel
 
+import android.provider.MediaStore.Audio.Media
 import com.densitech.scrollsmooth.ui.video.model.MediaInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,9 +19,15 @@ class GetVideosUseCase @Inject constructor() {
 
                 connection.inputStream.bufferedReader().use { reader ->
                     val response = reader.readText()
-                    Json.decodeFromString(response)
+                    val json = Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                        prettyPrint = true
+                    }
+                    json.decodeFromString(response)
                 }
             } catch (e: Exception) {
+                e
                 emptyList()
             }
         }

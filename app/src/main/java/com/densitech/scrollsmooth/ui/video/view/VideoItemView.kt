@@ -2,24 +2,18 @@ package com.densitech.scrollsmooth.ui.video.view
 
 import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.media3.common.Player
@@ -27,9 +21,11 @@ import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
+import com.densitech.scrollsmooth.ui.utils.formatTime
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
 import com.densitech.scrollsmooth.ui.video.prefetch.PlayerPool
+import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel.Companion.MAX_DURATION_TIME_TO_SEEK
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
@@ -52,7 +48,13 @@ fun VideoItemView(
     var currentPosition by remember { mutableFloatStateOf(0F) }
     var isDraggingSlider by remember { mutableStateOf(false) }
     var heightOfSlider by remember { mutableStateOf(2.dp) }
-    var onSeekingCurrentDuration by remember { mutableLongStateOf(0) }
+    var onSeekingCurrentDurationPercent by rememberSaveable { mutableFloatStateOf(0F) }
+    var currentPreviewOffsetXFrame by remember {
+        mutableStateOf(0F)
+    }
+
+    val screenWidth1 = with(LocalDensity.current) { 1080.toDp() }
+    val itemWidth1 = with(LocalDensity.current) { (1080 / 5).toDp() }
 
     val videoListener = object : Player.Listener {
         override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -142,20 +144,32 @@ fun VideoItemView(
                 modifier = modifier
             )
 
-            if (isDraggingSlider) {
-                SeekingTimeView(
-                    currentPosition = onSeekingCurrentDuration,
+            if (!isDraggingSlider) {
+//                SeekingTimeView(
+//                    currentPosition = onSeekingCurrentDuration,
+//                    duration = player.duration,
+//                    modifier = Modifier
+//                        .padding(bottom = 30.dp)
+//                        .align(
+//                            Alignment.BottomCenter
+//                        )
+//                )
+
+                PreviewHolderView(
+                    url = "https://firebasestorage.googleapis.com/v0/b/smoothscroll-7252a.appspot.com/o/thumbnails%2F10_20240808181733_7612773-hd_1080_1920_25fps%2Fmedium%2Fthumbnail_0.jpg?alt=media&token=1b81d737-9905-4d1a-b680-173a98c30d4c",
+                    percentage = onSeekingCurrentDurationPercent,
                     duration = player.duration,
                     modifier = Modifier
                         .padding(bottom = 30.dp)
                         .align(
-                            Alignment.BottomCenter
-                        )
+                            Alignment.BottomStart
+                        ),
+                    offsetX = currentPreviewOffsetXFrame
                 )
             }
 
-            // 30s
-            if (player.duration >= 30000) {
+            // 15s
+            if (player.duration >= MAX_DURATION_TIME_TO_SEEK) {
                 SliderTimeView(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -169,7 +183,15 @@ fun VideoItemView(
                         heightOfSlider = if (isDragged) 30.dp else 2.dp
                     },
                     onTempSliderPositionChange = { loadPercent ->
-                        onSeekingCurrentDuration = (loadPercent * player.duration).toLong()
+//                        onSeekingCurrentDuration = (loadPercent * player.duration).toLong()
+                        onSeekingCurrentDurationPercent = loadPercent
+
+                        currentPreviewOffsetXFrame =
+                            ((screenWidth1 - itemWidth1) * onSeekingCurrentDurationPercent).coerceIn(
+                                0.dp,
+                                (screenWidth1 - itemWidth1)
+                            ).value
+                        println(currentPreviewOffsetXFrame)
                     })
             }
         }

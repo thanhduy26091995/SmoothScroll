@@ -33,6 +33,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.chromium.net.CronetEngine
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -70,6 +72,10 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         private const val MANAGED_ITEM_COUNT = 5
         private const val ITEM_ADD_REMOVE_COUNT = 5
         private const val NUMBER_OF_PLAYERS = 7
+        const val MAX_DURATION_TIME_TO_SEEK = 15000
+        const val EXTRAS_METADATA = "metadata"
+        const val EXTRAS_THUMBNAILS = "thumbnails"
+        const val EXTRAS_PREVIEWS = "previews"
     }
 
     init {
@@ -87,14 +93,14 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         for (video in videoResponse) {
             val metaData = MediaMetadata.Builder()
                 .setExtras(Bundle().apply {
-                    putDouble("width", video.width)
-                    putDouble("height", video.height)
-                    putDouble("bitrate", video.bitrate)
+                    putString(EXTRAS_METADATA, Json.encodeToString(video.metadata))
+                    putString(EXTRAS_THUMBNAILS, Json.encodeToString(video.thumbnails))
+                    putString(EXTRAS_PREVIEWS, Json.encodeToString(video.previews))
                 }).build()
             val mediaItem =
-                MediaItem.Builder().setUri(video.url)
+                MediaItem.Builder().setUri(video.videoUrl)
                     .setMediaMetadata(metaData)
-                    .setMediaId(video.url).build()
+                    .setMediaId(video.videoId).build()
             mediaItems.add(mediaItem)
         }
 
@@ -186,9 +192,23 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         holderRatioMap[token] = Pair(width, height)
     }
 
-    fun getCurrentRatio(token: Int, configRatio: Pair<Int, Int>?): Pair<Int, Int> {
-        val ratioConfigured = configRatio ?: Pair(0, 0)
-        val currentValue = holderRatioMap[token] ?: return ratioConfigured
+    fun getCurrentRatio(token: Int, mediaMetadata: MediaMetadata): Pair<Int, Int> {
+        val currentValue = holderRatioMap[token]
+        if (currentValue == null) {
+            val configRatio = mediaMetadata.extras?.let {
+                val metadataStr = it.getString(EXTRAS_METADATA) ?: return@let null
+                val metadata =
+                    Json.decodeFromString<com.densitech.scrollsmooth.ui.video.model.MediaMetadata>(
+                        metadataStr
+                    )
+
+                val width = metadata.width.toInt()
+                val height = metadata.height.toInt()
+                Pair(width, height)
+            }
+
+            return configRatio ?: Pair(0, 0)
+        }
         return currentValue
     }
 

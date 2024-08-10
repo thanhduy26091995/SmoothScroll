@@ -117,12 +117,8 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
 
                 // Ensure playerPool.value is not null
                 val currentPlayerPool = playerPool.value ?: return@VerticalPager
-                val configRatio = mediaItem.mediaMetadata.extras?.let {
-                    val width = it.getDouble("width").toInt()
-                    val height = it.getDouble("height").toInt()
-                    Pair(width, height)
-                }
-                val currentRatio = videoScreenViewModel.getCurrentRatio(realPage, configRatio)
+                val currentRatio =
+                    videoScreenViewModel.getCurrentRatio(realPage, mediaItem.mediaMetadata)
 
                 VideoItemView(
                     playerPool = currentPlayerPool,

@@ -75,4 +75,5 @@ dependencies {
     implementation(libs.hilt.compose)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization)
+    implementation(libs.coil)
 }

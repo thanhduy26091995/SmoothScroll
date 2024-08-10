@@ -1,19 +1,17 @@
 package com.densitech.scrollsmooth.ui.video.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class MediaInfo(
-    val url: String,
-    val bitrate: Double,
-    val width: Double,
-    val height: Double
-)
-
-data class PagingResponse(
-    val currentPage: Int,
-    val pageSize: Int,
-    val totalPage: Int,
-    val items: List<MediaInfo>,
-    val nextPage: Int?
+    val status: String,
+    @SerialName("video_id")
+    val videoId: String,
+    @SerialName("video_url")
+    val videoUrl: String,
+    @SerialName("metadata")
+    val metadata: MediaMetadata?,
+    val thumbnails: MediaThumbnail?,
+    val previews: List<MediaPreview>
 )

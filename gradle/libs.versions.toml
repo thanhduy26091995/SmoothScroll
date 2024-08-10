@@ -12,6 +12,7 @@ media3Exo = "1.4.0"
 hiltCompose = "1.0.0"
 kotlinSerialization = "1.6.2"
 kotlinCoroutines = "1.8.1"
+coil = "2.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,6 +36,7 @@ media3-exo-okhttp = { module = "androidx.media3:media3-datasource-okhttp", versi
 media3-exo-cronet = { module = "androidx.media3:media3-datasource-cronet", version.ref = "media3Exo" }
 kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinCoroutines" }
+coil = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 hilt-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltCompose" }
 
@@ -44,6 +46,5 @@ media3-bundles = ["media3-exo-player", "media3-exo-dashplayer", "media3-exo-okht
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 

@@ -10,19 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.densitech.scrollsmooth.ui.utils.formatTime
 import java.util.Locale
 
 @Composable
 fun SeekingTimeView(currentPosition: Long, duration: Long, modifier: Modifier = Modifier) {
-    val timeFormat = "%02d:%02d"
-
-    fun formatTime(timeInMilliSeconds: Long): String {
-        val timeInSeconds = (timeInMilliSeconds / 1000)
-        val minutes = timeInSeconds / 60
-        val seconds = timeInSeconds % 60
-        return String.format(Locale.getDefault(), timeFormat, minutes, seconds)
-    }
-
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Text(text = formatTime(currentPosition), fontSize = 28.sp, fontWeight = FontWeight.Bold)
 
