@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -72,4 +73,6 @@ dependencies {
 
     // Hilt navigation compose
     implementation(libs.hilt.compose)
+    implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.serialization)
 }

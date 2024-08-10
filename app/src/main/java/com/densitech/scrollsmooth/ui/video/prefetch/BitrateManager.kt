@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video.preFetch
+package com.densitech.scrollsmooth.ui.video.prefetch
 
 import android.content.Context
 import android.net.ConnectivityManager

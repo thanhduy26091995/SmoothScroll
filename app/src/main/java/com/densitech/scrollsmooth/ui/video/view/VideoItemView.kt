@@ -29,7 +29,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
-import com.densitech.scrollsmooth.ui.video.preFetch.PlayerPool
+import com.densitech.scrollsmooth.ui.video.prefetch.PlayerPool
 import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)

@@ -23,7 +23,7 @@ fun LoadingScreen(modifier: Modifier = Modifier) {
                 .background(Color.Black)
         ) {
             Image(
-                painter = painterResource(id = R.drawable.app_icon),
+                painter = painterResource(id = R.mipmap.ic_launcher),
                 contentDescription = null,
                 modifier = Modifier
                     .size(screenWidth / 2)

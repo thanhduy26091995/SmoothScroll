@@ -8,7 +8,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.PagerDefaults
@@ -16,16 +15,7 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -107,74 +97,68 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
         }
     }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
-        val screenHeight = maxHeight
-        // Compute the total page count outside of the VerticalPager composable
-        if (mediaList.size > 0) {
-            val totalPageCount = remember(mediaList) { mediaList.size }
+    if (mediaList.size > 0) {
+        val totalPageCount = remember(mediaList) { mediaList.size }
 
-            Box {
-                VerticalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    beyondBoundsPageCount = 1,
-                    flingBehavior = fling
-                ) { page ->
-                    val realPage = page % totalPageCount
-                    val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
-                    val mediaSource =
-                        videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
-                            ?: return@VerticalPager
+        Box {
+            VerticalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black),
+                beyondBoundsPageCount = 1,
+                flingBehavior = fling
+            ) { page ->
+                val realPage = page % totalPageCount
+                val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
+                val mediaSource =
+                    videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
+                        ?: return@VerticalPager
 
-                    // Ensure playerPool.value is not null
-                    val currentPlayerPool = playerPool.value ?: return@VerticalPager
-                    val configRatio = mediaItem.mediaMetadata.extras?.let {
-                        val width = it.getDouble("width").toInt()
-                        val height = it.getDouble("height").toInt()
-                        Pair(width, height)
-                    }
-                    val currentRatio = videoScreenViewModel.getCurrentRatio(realPage, configRatio)
-
-                    VideoItemView(
-                        playerPool = currentPlayerPool,
-                        isActive = currentActiveIndex == realPage,
-                        currentToken = realPage,
-                        currentMediaSource = mediaSource,
-                        currentRatio = currentRatio,
-                        onPlayerReady = { token, exoPlayer ->
-                            videoScreenViewModel.onPlayerReady(token, exoPlayer)
-                        },
-                        onPlayerDestroy = { token ->
-                            videoScreenViewModel.onPlayerDestroy(token)
-                        },
-                        onReceiveRatio = { token, width, height ->
-                            videoScreenViewModel.onReceiveRatio(token, width, height)
-                        },
-                        onPauseClick = {
-                            isPause = it
-                        },
-                        modifier = Modifier
-                            .fillMaxSize()
-                    )
+                // Ensure playerPool.value is not null
+                val currentPlayerPool = playerPool.value ?: return@VerticalPager
+                val configRatio = mediaItem.mediaMetadata.extras?.let {
+                    val width = it.getDouble("width").toInt()
+                    val height = it.getDouble("height").toInt()
+                    Pair(width, height)
                 }
+                val currentRatio = videoScreenViewModel.getCurrentRatio(realPage, configRatio)
 
-                AnimatedVisibility(
-                    visible = isPause,
-                    modifier = Modifier.align(Alignment.Center)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_play_arrow_24),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .align(Alignment.Center)
-                            .alpha(0.2f),
-                    )
-                }
+                VideoItemView(
+                    playerPool = currentPlayerPool,
+                    isActive = currentActiveIndex == realPage,
+                    currentToken = realPage,
+                    currentMediaSource = mediaSource,
+                    currentRatio = currentRatio,
+                    onPlayerReady = { token, exoPlayer ->
+                        videoScreenViewModel.onPlayerReady(token, exoPlayer)
+                    },
+                    onPlayerDestroy = { token ->
+                        videoScreenViewModel.onPlayerDestroy(token)
+                    },
+                    onReceiveRatio = { token, width, height ->
+                        videoScreenViewModel.onReceiveRatio(token, width, height)
+                    },
+                    onPauseClick = {
+                        isPause = it
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isPause,
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_play_arrow_24),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(96.dp)
+                        .align(Alignment.Center)
+                        .alpha(0.2f),
+                )
             }
         }
     }
