@@ -15,7 +15,16 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -119,12 +128,15 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                 val currentPlayerPool = playerPool.value ?: return@VerticalPager
                 val currentRatio =
                     videoScreenViewModel.getCurrentRatio(realPage, mediaItem.mediaMetadata)
+                val thumbnailDetailList =
+                    videoScreenViewModel.getCurrentThumbnail(mediaItem.mediaMetadata)
 
                 VideoItemView(
                     playerPool = currentPlayerPool,
                     isActive = currentActiveIndex == realPage,
                     currentToken = realPage,
                     currentMediaSource = mediaSource,
+                    thumbnailDetailList = thumbnailDetailList,
                     currentRatio = currentRatio,
                     onPlayerReady = { token, exoPlayer ->
                         videoScreenViewModel.onPlayerReady(token, exoPlayer)
@@ -157,5 +169,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                 )
             }
         }
+    } else {
+        LoadingScreen()
     }
 }

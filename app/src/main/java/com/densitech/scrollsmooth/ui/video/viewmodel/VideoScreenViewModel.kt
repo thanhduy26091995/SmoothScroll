@@ -25,6 +25,8 @@ import androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Status.STA
 import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import com.densitech.scrollsmooth.ui.video.model.MediaThumbnail
+import com.densitech.scrollsmooth.ui.video.model.MediaThumbnailDetail
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
 import com.densitech.scrollsmooth.ui.video.prefetch.CacheSingleton
 import com.densitech.scrollsmooth.ui.video.prefetch.MediaItemSource
@@ -190,6 +192,16 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
             _screenState.value = ScreenState.PLAY_STATE
         }
         holderRatioMap[token] = Pair(width, height)
+    }
+
+    fun getCurrentThumbnail(mediaMetadata: MediaMetadata): List<MediaThumbnailDetail> {
+        val thumbnailStr = mediaMetadata.extras?.getString(EXTRAS_THUMBNAILS) ?: return emptyList()
+        val thumbnail = Json.decodeFromString<MediaThumbnail>(thumbnailStr)
+        if (thumbnail.small.isEmpty()) {
+            return emptyList()
+        }
+
+        return thumbnail.medium
     }
 
     fun getCurrentRatio(token: Int, mediaMetadata: MediaMetadata): Pair<Int, Int> {

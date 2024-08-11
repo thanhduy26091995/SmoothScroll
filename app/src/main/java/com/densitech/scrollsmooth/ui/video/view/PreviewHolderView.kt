@@ -1,10 +1,17 @@
 package com.densitech.scrollsmooth.ui.video.view
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -12,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -23,7 +29,6 @@ import com.densitech.scrollsmooth.ui.utils.formatTime
 @Composable
 fun PreviewHolderView(
     url: String,
-    percentage: Float,
     duration: Long,
     offsetX: Float,
     modifier: Modifier = Modifier
@@ -49,14 +54,17 @@ fun PreviewHolderView(
                     .diskCacheKey(url)
                     .memoryCacheKey(url)
                     .diskCachePolicy(CachePolicy.ENABLED)
-                    .memoryCachePolicy(CachePolicy.ENABLED).build(),
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .build(),
                 contentDescription = null,
-                contentScale = ContentScale.FillWidth,
-                modifier = Modifier.fillMaxSize()
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
             )
 
             Text(
-                text = formatTime((percentage * duration).toLong()),
+                text = formatTime(duration),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 5.dp),
