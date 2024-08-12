@@ -4,7 +4,8 @@ SmoothScroll is an Android app designed to provide a smooth video scrolling expe
 I used Media3 ExoPlayer to achieve video playback
 
 # Video Demo
-https://github.com/user-attachments/assets/c6e1bf4d-3558-451c-8b8e-ad9b8045a692
+
+https://github.com/user-attachments/assets/3898de67-bd3e-4132-8085-c849ce3d133c
 
 ## Features
 
