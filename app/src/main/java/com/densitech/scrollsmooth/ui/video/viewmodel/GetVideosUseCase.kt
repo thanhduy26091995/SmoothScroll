@@ -1,6 +1,5 @@
 package com.densitech.scrollsmooth.ui.video.viewmodel
 
-import android.provider.MediaStore.Audio.Media
 import com.densitech.scrollsmooth.ui.video.model.MediaInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

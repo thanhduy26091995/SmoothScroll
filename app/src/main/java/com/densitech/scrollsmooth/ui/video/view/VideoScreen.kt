@@ -15,7 +15,17 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -71,11 +81,9 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                     return@LifecycleEventObserver
                 }
                 videoScreenViewModel.play(currentPlayingIndex)
-            }
-            else if (event == Lifecycle.Event.ON_STOP) {
+            } else if (event == Lifecycle.Event.ON_STOP) {
                 videoScreenViewModel.pauseAllPlayer()
-            }
-            else if (event == Lifecycle.Event.ON_CREATE) {
+            } else if (event == Lifecycle.Event.ON_CREATE) {
                 videoScreenViewModel.pauseAllPlayer()
                 if (mediaItemSource.value?.mediaItems.isNullOrEmpty()) {
                     videoScreenViewModel.initData(context)

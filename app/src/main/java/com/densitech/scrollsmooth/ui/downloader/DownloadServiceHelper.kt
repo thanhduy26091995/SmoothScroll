@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.downloadvideo
+package com.densitech.scrollsmooth.ui.downloader
 
 import android.content.Context
 import android.net.Uri
