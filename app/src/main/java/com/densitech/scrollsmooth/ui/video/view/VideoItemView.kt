@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
@@ -54,6 +56,7 @@ fun VideoItemView(
     onPlayerReady: (Int, ExoPlayer?) -> Unit,
     onPlayerDestroy: (Int) -> Unit,
     onPauseClick: (Boolean) -> Unit,
+    onDownloadVideoClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
@@ -163,17 +166,25 @@ fun VideoItemView(
     }
 
     exoPlayer?.let { player ->
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+        ConstraintLayout(
+            modifier = modifier.fillMaxSize()
         ) {
+            val (videoView, thumbnailView, sliderView, actionView, contentView) = createRefs()
+
             VideoPlayer(
                 exoPlayer = player,
                 ratio = ratio.first / ratio.second.toFloat(),
                 onPauseClick = {
                     onPauseClick.invoke(!player.playWhenReady)
                 },
-                modifier = modifier
+                modifier = modifier.constrainAs(videoView) {
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                }
             )
 
             if (isDraggingSlider) {
@@ -183,7 +194,12 @@ fun VideoItemView(
                     duration = onSeekingCurrentDuration,
                     modifier = Modifier
                         .padding(bottom = ThumbnailPadding)
-                        .align(Alignment.BottomStart)
+                        .constrainAs(thumbnailView) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(sliderView.top)
+                            width = Dimension.fillToConstraints
+                        }
                 )
             }
 
@@ -192,7 +208,12 @@ fun VideoItemView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(heightOfSlider)
-                        .align(Alignment.BottomCenter),
+                        .constrainAs(sliderView) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                            width = Dimension.fillToConstraints
+                        },
                     currentValue = currentPosition,
                     onValueChange = {
                         player.seekTo((it * player.duration).toLong())
@@ -206,6 +227,49 @@ fun VideoItemView(
                             ((loadPercent * player.duration).toLong() / 500) * 500
                         onSeekingCurrentDurationPercent = loadPercent
                     }
+                )
+            }
+
+            if (!isDraggingSlider) {
+                VideoActionView(
+                    token = currentToken,
+                    likeCount = 10,
+                    commentCount = 10,
+                    shareCount = 10,
+                    onLikeClick = {},
+                    onCommentClick = {},
+                    onShareClick = {},
+                    onDownloadClick = {
+                        onDownloadVideoClick.invoke(currentToken)
+                    },
+                    modifier = Modifier
+                        .constrainAs(actionView) {
+                            end.linkTo(parent.end, 16.dp)
+                            bottom.linkTo(parent.bottom, 30.dp)
+                        }
+                )
+
+                OwnerSectionView(
+                    owner = "Dennis",
+                    content = "Here as you can see we are assigning maxLines to plenty of lines if the state is expanded, if not, we limit it to two lines(your preference). As you can imagine, the text will just be cut off at the end of the sentence.",
+                    tags = listOf("Jetpack Compose", "Nope ", "testing"),
+                    onOwnerClick = { owner ->
+                        // Handle navigate to owner account here
+                        println(owner)
+                    },
+                    onTagClick = { tag ->
+                        // Handle navigate to tag search here
+                        println(tag)
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp)
+                        .constrainAs(contentView) {
+                            start.linkTo(parent.start)
+                            end.linkTo(actionView.start)
+                            bottom.linkTo(parent.bottom)
+                            width = Dimension.fillToConstraints
+                        }
                 )
             }
         }
@@ -263,4 +327,4 @@ fun VideoPlayer(
 private val SliderHeightDefault = 2.dp
 private val SliderHeightDragged = 30.dp
 private const val ItemCount = 5
-private val ThumbnailPadding = 30.dp
+private val ThumbnailPadding = 10.dp

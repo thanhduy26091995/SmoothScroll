@@ -150,6 +150,9 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                     onPauseClick = {
                         isPause = it
                     },
+                    onDownloadVideoClick = { token ->
+                        // Handle download video here
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                 )
