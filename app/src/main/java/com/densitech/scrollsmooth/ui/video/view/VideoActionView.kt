@@ -16,6 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.densitech.scrollsmooth.R
+import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 
 @Composable
 fun VideoActionView(
@@ -75,7 +76,7 @@ private fun VideoActionItemView(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.clickable {
+        modifier = modifier.clickableNoRipple {
             onItemClick.invoke()
         },
         horizontalAlignment = Alignment.CenterHorizontally

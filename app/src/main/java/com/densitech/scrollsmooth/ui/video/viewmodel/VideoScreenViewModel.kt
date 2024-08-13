@@ -78,6 +78,7 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         const val EXTRAS_METADATA = "metadata"
         const val EXTRAS_THUMBNAILS = "thumbnails"
         const val EXTRAS_PREVIEWS = "previews"
+        const val CACHING_DOWNLOAD_FOLDER = "downloads"
     }
 
     init {
@@ -141,7 +142,7 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         val trackSelector = DefaultTrackSelector(context)
         trackSelector.init({}, DefaultBandwidthMeter.getSingletonInstance(context))
 
-        val cache = CacheSingleton.getInstance(context)
+        val cache = CacheSingleton.getInstance(context, CACHING_DOWNLOAD_FOLDER)
         val cacheSink = CacheDataSink.Factory().setCache(cache)
 
         // Cronet

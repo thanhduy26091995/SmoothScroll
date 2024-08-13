@@ -12,16 +12,16 @@ object CacheSingleton {
     @Volatile
     private var instance: SimpleCache? = null
 
-    fun getInstance(context: Context): SimpleCache {
+    fun getInstance(context: Context, downloadFolder: String): SimpleCache {
         return instance ?: synchronized(this) {
-            instance ?: buildCache(context).also { instance = it }
+            instance ?: buildCache(context, downloadFolder).also { instance = it }
         }
     }
 
-    private fun buildCache(context: Context): SimpleCache {
+    private fun buildCache(context: Context, downloadFolder: String): SimpleCache {
         val databaseProvider = StandaloneDatabaseProvider(context)
         val downloadDir = context.getExternalFilesDir(null) ?: context.filesDir
-        val cacheDir = File(downloadDir, "downloads")
+        val cacheDir = File(downloadDir, downloadFolder)
         if (!cacheDir.exists()) {
             val created = cacheDir.mkdirs()
             if (!created) {

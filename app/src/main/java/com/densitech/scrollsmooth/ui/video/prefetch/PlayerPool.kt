@@ -19,6 +19,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.BandwidthMeter
 import androidx.media3.exoplayer.util.EventLogger
 import com.densitech.scrollsmooth.ui.utils.CustomAnalyticsListener
+import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel.Companion.CACHING_DOWNLOAD_FOLDER
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.Maps
@@ -129,7 +130,7 @@ class PlayerPool(
         private var playerCounter = 0
 
         override fun createPlayer(): ExoPlayer {
-            val cache = CacheSingleton.getInstance(context)
+            val cache = CacheSingleton.getInstance(context, CACHING_DOWNLOAD_FOLDER)
             val cacheSink = CacheDataSink.Factory().setCache(cache)
 
             // Cronet

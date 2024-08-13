@@ -19,6 +19,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 
 @Composable
 fun OwnerSectionView(
@@ -62,7 +63,7 @@ fun OwnerSectionView(
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.clickable { onOwnerClick(owner) }
+            modifier = Modifier.clickableNoRipple { onOwnerClick(owner) }
         )
 
         // Clickable Combined Text

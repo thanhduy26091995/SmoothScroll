@@ -15,23 +15,17 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import com.densitech.scrollsmooth.R
@@ -66,10 +60,33 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
         snapAnimationSpec = spring(stiffness = Spring.StiffnessMedium)
     )
 
-    LaunchedEffect(true) {
-        videoScreenViewModel.pauseAllPlayer()
-        if (mediaItemSource.value?.mediaItems.isNullOrEmpty()) {
-            videoScreenViewModel.initData(context)
+    val lifeCycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifeCycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                // Play latest video if needed
+                val currentPlayingIndex = videoScreenViewModel.currentPlayingIndex
+                if (currentPlayingIndex == -1) {
+                    return@LifecycleEventObserver
+                }
+                videoScreenViewModel.play(currentPlayingIndex)
+            }
+            else if (event == Lifecycle.Event.ON_STOP) {
+                videoScreenViewModel.pauseAllPlayer()
+            }
+            else if (event == Lifecycle.Event.ON_CREATE) {
+                videoScreenViewModel.pauseAllPlayer()
+                if (mediaItemSource.value?.mediaItems.isNullOrEmpty()) {
+                    videoScreenViewModel.initData(context)
+                }
+            }
+        }
+
+        lifeCycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifeCycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
