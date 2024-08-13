@@ -25,8 +25,9 @@ import androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Status.STA
 import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
-import com.densitech.scrollsmooth.ui.video.model.MediaThumbnail
-import com.densitech.scrollsmooth.ui.video.model.MediaThumbnailDetail
+import com.densitech.scrollsmooth.ui.downloader.DownloadManagerSingleton
+import com.densitech.scrollsmooth.ui.downloader.DownloadServiceHelper
+import com.densitech.scrollsmooth.ui.video.model.MediaInfo
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
 import com.densitech.scrollsmooth.ui.video.prefetch.CacheSingleton
 import com.densitech.scrollsmooth.ui.video.prefetch.MediaItemSource
@@ -65,6 +66,11 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
     var currentPlayingIndex: Int = C.INDEX_UNSET
         private set
 
+    private val playbackThread: HandlerThread =
+        HandlerThread("playback-thread", Process.THREAD_PRIORITY_AUDIO)
+
+    private lateinit var downloadServiceHelper: DownloadServiceHelper
+
     companion object {
         private const val TAG = "VideoScreenViewModel"
         private const val LOAD_CONTROL_MIN_BUFFER_MS = 20_000
@@ -76,8 +82,6 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         private const val NUMBER_OF_PLAYERS = 7
         const val MAX_DURATION_TIME_TO_SEEK = 15000
         const val EXTRAS_METADATA = "metadata"
-        const val EXTRAS_THUMBNAILS = "thumbnails"
-        const val EXTRAS_PREVIEWS = "previews"
         const val CACHING_DOWNLOAD_FOLDER = "downloads"
     }
 
@@ -85,33 +89,6 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         viewModelScope.launch {
             loadVideos()
         }
-    }
-
-    private val playbackThread: HandlerThread =
-        HandlerThread("playback-thread", Process.THREAD_PRIORITY_AUDIO)
-
-    private suspend fun loadVideos() {
-        val videoResponse = getVideosUseCase.fetchVideos()
-        val mediaItems = arrayListOf<MediaItem>()
-        for (video in videoResponse) {
-            val metaData = MediaMetadata.Builder()
-                .setExtras(Bundle().apply {
-                    putString(EXTRAS_METADATA, Json.encodeToString(video.metadata))
-                    putString(EXTRAS_THUMBNAILS, Json.encodeToString(video.thumbnails))
-                    putString(EXTRAS_PREVIEWS, Json.encodeToString(video.previews))
-                }).build()
-            val mediaItem =
-                MediaItem.Builder().setUri(video.videoUrl)
-                    .setMediaMetadata(metaData)
-                    .setMediaId(video.videoId).build()
-            mediaItems.add(mediaItem)
-        }
-
-        val updatedList = _playList.value.toMutableList().apply {
-            addAll(mediaItems)
-        }
-        _playList.value = updatedList
-        _mediaItemSource.value = MediaItemSource(_playList.value)
     }
 
     fun initData(context: Context) {
@@ -173,6 +150,19 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         }
 
         preloadManager.invalidate()
+
+        // Init download
+        downloadServiceHelper =
+            DownloadServiceHelper(
+                context,
+                cronetDataSourceFactory,
+                DownloadManagerSingleton.getInstance(context)
+            )
+    }
+
+    fun downloadVideo(index: Int) {
+        val mediaItem = _mediaItemSource.value?.mediaItems?.get(index) ?: return
+        downloadServiceHelper.downloadClick(mediaItem)
     }
 
     fun getMediaSourceByMediaItem(mediaItem: MediaItem, index: Int): MediaSource? {
@@ -195,14 +185,11 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         holderRatioMap[token] = Pair(width, height)
     }
 
-    fun getCurrentThumbnail(mediaMetadata: MediaMetadata): List<MediaThumbnailDetail> {
-        val thumbnailStr = mediaMetadata.extras?.getString(EXTRAS_THUMBNAILS) ?: return emptyList()
-        val thumbnail = Json.decodeFromString<MediaThumbnail>(thumbnailStr)
-        if (thumbnail.small.isEmpty()) {
-            return emptyList()
-        }
-
-        return thumbnail.medium
+    fun getCurrentMediaInfo(mediaMetadata: MediaMetadata): MediaInfo {
+        val mediaInfoStr = mediaMetadata.extras?.getString(EXTRAS_METADATA)
+            ?: throw Exception("MediaInfo not found")
+        val mediaInfo = Json.decodeFromString<MediaInfo>(mediaInfoStr)
+        return mediaInfo
     }
 
     fun getCurrentRatio(token: Int, mediaMetadata: MediaMetadata): Pair<Int, Int> {
@@ -297,6 +284,29 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
 
         Log.d(TAG, "removeMediaItem: Removing item at index ${itemAndIndex.second}")
         preloadManager.remove(itemAndIndex.first)
+    }
+
+    private suspend fun loadVideos() {
+        val videoResponse = getVideosUseCase.fetchVideos()
+        val mediaItems = arrayListOf<MediaItem>()
+        for (video in videoResponse) {
+            val metaData = MediaMetadata.Builder()
+                .setTitle(video.title)
+                .setExtras(Bundle().apply {
+                    putString(EXTRAS_METADATA, Json.encodeToString(video))
+                }).build()
+            val mediaItem =
+                MediaItem.Builder().setUri(video.videoUrl)
+                    .setMediaMetadata(metaData)
+                    .setMediaId(video.videoId).build()
+            mediaItems.add(mediaItem)
+        }
+
+        val updatedList = _playList.value.toMutableList().apply {
+            addAll(mediaItems)
+        }
+        _playList.value = updatedList
+        _mediaItemSource.value = MediaItemSource(_playList.value)
     }
 
     inner class DefaultPreloadControl : TargetPreloadStatusControl<Int> {

@@ -1,7 +1,9 @@
-@file:OptIn(ExperimentalFoundationApi::class)
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalPermissionsApi::class)
 
 package com.densitech.scrollsmooth.ui.video.view
 
+import android.annotation.SuppressLint
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -41,8 +43,13 @@ import androidx.media3.common.util.UnstableApi
 import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+@SuppressLint("InlinedApi")
+@ExperimentalPermissionsApi
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -68,6 +75,13 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
         pagerSnapDistance = PagerSnapDistance.atMost(1),
         snapPositionalThreshold = 0.3f,
         snapAnimationSpec = spring(stiffness = Spring.StiffnessMedium)
+    )
+
+    val notificationPermission = rememberPermissionState(
+        permission = android.Manifest.permission.POST_NOTIFICATIONS,
+        onPermissionResult = { isGrant ->
+            // Handle permission result
+        }
     )
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -151,18 +165,15 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
 
                 // Ensure playerPool.value is not null
                 val currentPlayerPool = playerPool.value ?: return@VerticalPager
-                val currentRatio =
-                    videoScreenViewModel.getCurrentRatio(realPage, mediaItem.mediaMetadata)
-                val thumbnailDetailList =
-                    videoScreenViewModel.getCurrentThumbnail(mediaItem.mediaMetadata)
+                val mediaInfo =
+                    videoScreenViewModel.getCurrentMediaInfo(mediaItem.mediaMetadata)
 
                 VideoItemView(
                     playerPool = currentPlayerPool,
                     isActive = currentActiveIndex == realPage,
                     currentToken = realPage,
                     currentMediaSource = mediaSource,
-                    thumbnailDetailList = thumbnailDetailList,
-                    currentRatio = currentRatio,
+                    mediaInfo = mediaInfo,
                     onPlayerReady = { token, exoPlayer ->
                         videoScreenViewModel.onPlayerReady(token, exoPlayer)
                     },
@@ -176,7 +187,18 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                         isPause = it
                     },
                     onDownloadVideoClick = { token ->
-                        // Handle download video here
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            // Handle download video here, but need to check permission first
+                            if (!notificationPermission.status.isGranted) {
+                                notificationPermission.launchPermissionRequest()
+                            } else {
+                                // Start to download
+                                videoScreenViewModel.downloadVideo(token)
+                            }
+                        } else {
+                            // Start to download
+                            videoScreenViewModel.downloadVideo(token)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxSize()

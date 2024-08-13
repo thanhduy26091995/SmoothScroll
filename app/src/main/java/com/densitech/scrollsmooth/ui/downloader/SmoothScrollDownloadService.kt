@@ -5,8 +5,6 @@ import android.content.Context
 import androidx.media3.common.util.NotificationUtil
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
-import androidx.media3.database.StandaloneDatabaseProvider
-import androidx.media3.datasource.cronet.CronetDataSource
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadManager
 import androidx.media3.exoplayer.offline.DownloadNotificationHelper
@@ -14,9 +12,6 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
 import com.densitech.scrollsmooth.R
-import com.densitech.scrollsmooth.ui.video.prefetch.CacheSingleton
-import org.chromium.net.CronetEngine
-import java.util.concurrent.Executors
 
 @UnstableApi
 class SmoothScrollDownloadService : DownloadService(
@@ -31,11 +26,11 @@ class SmoothScrollDownloadService : DownloadService(
         private const val FOREGROUND_NOTIFICATION_ID = 1
         private const val DEFAULT_FOREGROUND_NOTIFICATION_UPDATE_INTERVAL = 1000L
         private const val DOWNLOAD_NOTIFICATION_CHANNEL_ID = "download_channel"
-        private const val DOWNLOAD_FOLDER = "video_downloaded"
+        const val DOWNLOAD_FOLDER = "video_downloaded"
     }
 
     override fun getDownloadManager(): DownloadManager {
-        val downloadManager = getDownloadManager(this)
+        val downloadManager = DownloadManagerSingleton.getInstance(this)
         val downloadNotificationHelper =
             DownloadNotificationHelper(this, DOWNLOAD_NOTIFICATION_CHANNEL_ID)
         downloadManager.addListener(
@@ -66,23 +61,6 @@ class SmoothScrollDownloadService : DownloadService(
             null,
             downloads,
             notMetRequirements
-        )
-    }
-
-    private fun getDownloadManager(context: Context): DownloadManager {
-        // Cronet
-        val cronetEngine = CronetEngine.Builder(context).build()
-        val cronetDataSourceFactory = CronetDataSource.Factory(
-            cronetEngine,
-            Executors.newSingleThreadExecutor()
-        )
-
-        return DownloadManager(
-            context,
-            StandaloneDatabaseProvider(context),
-            CacheSingleton.getInstance(context, DOWNLOAD_FOLDER),
-            cronetDataSourceFactory,
-            Executors.newSingleThreadExecutor()
         )
     }
 

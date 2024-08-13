@@ -14,6 +14,7 @@ kotlinSerialization = "1.6.2"
 kotlinCoroutines = "1.8.1"
 coil = "2.7.0"
 constraintlayout = "1.0.1"
+permission = "0.34.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -39,6 +40,7 @@ media3-exo-cronet = { module = "androidx.media3:media3-datasource-cronet", versi
 kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinCoroutines" }
 coil = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
+permission = { module = "com.google.accompanist:accompanist-permissions", version.ref = "permission" }
 
 hilt-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltCompose" }
 

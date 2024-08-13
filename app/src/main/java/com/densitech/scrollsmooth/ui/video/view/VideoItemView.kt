@@ -34,6 +34,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
+import com.densitech.scrollsmooth.ui.video.model.MediaInfo
 import com.densitech.scrollsmooth.ui.video.model.MediaThumbnailDetail
 import com.densitech.scrollsmooth.ui.video.prefetch.PlayerPool
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel.Companion.MAX_DURATION_TIME_TO_SEEK
@@ -47,17 +48,23 @@ fun VideoItemView(
     isActive: Boolean,
     currentToken: Int,
     currentMediaSource: MediaSource,
-    thumbnailDetailList: List<MediaThumbnailDetail>,
-    currentRatio: Pair<Int, Int>,
+    mediaInfo: MediaInfo,
     onReceiveRatio: (Int, Int, Int) -> Unit,
     onPlayerReady: (Int, ExoPlayer?) -> Unit,
     onPlayerDestroy: (Int) -> Unit,
     onPauseClick: (Boolean) -> Unit,
     onDownloadVideoClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-    var ratio by remember { mutableStateOf(currentRatio) }
+    var ratio by remember {
+        mutableStateOf(
+            Pair(
+                mediaInfo.metadata.width.toInt(),
+                mediaInfo.metadata.height.toInt()
+            )
+        )
+    }
     var isInView by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableFloatStateOf(0F) }
     var isDraggingSlider by remember { mutableStateOf(false) }
@@ -66,9 +73,9 @@ fun VideoItemView(
     var onSeekingCurrentDurationPercent by remember { mutableFloatStateOf(0F) }
     var currentPreviewOffsetXFrame by remember { mutableFloatStateOf(0F) }
 
-    val nearestThumbnail by remember(onSeekingCurrentDuration, thumbnailDetailList) {
+    val nearestThumbnail by remember(onSeekingCurrentDuration, mediaInfo.thumbnails.medium) {
         derivedStateOf {
-            thumbnailDetailList.findLast { it.time * 1000 <= onSeekingCurrentDuration }
+            mediaInfo.thumbnails.medium.findLast { it.time * 1000 <= onSeekingCurrentDuration }
         }
     }
 
@@ -81,7 +88,7 @@ fun VideoItemView(
     fun updatePreviewOffset(
         onSeekingCurrentDurationPercent: Float,
         screenWidthDp: Int,
-        itemWidthDp: Int
+        itemWidthDp: Int,
     ): Float {
         val screenWidthPx = with(currentDensity) { screenWidthDp.dp.toPx() }
         val itemWidthPx = with(currentDensity) { itemWidthDp.dp.toPx() }
@@ -247,9 +254,9 @@ fun VideoItemView(
                 )
 
                 OwnerSectionView(
-                    owner = "Dennis",
-                    content = "Here as you can see we are assigning maxLines to plenty of lines if the state is expanded, if not, we limit it to two lines(your preference). As you can imagine, the text will just be cut off at the end of the sentence.",
-                    tags = listOf("Jetpack Compose", "Nope ", "testing"),
+                    owner = mediaInfo.owner.name,
+                    content = mediaInfo.title,
+                    tags = mediaInfo.tags,
                     onOwnerClick = { owner ->
                         // Handle navigate to owner account here
                         println(owner)
@@ -278,7 +285,7 @@ fun ThumbnailPreviewView(
     nearestThumbnail: MediaThumbnailDetail?,
     duration: Long,
     currentPreviewOffsetXFrame: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (nearestThumbnail != null) {
         PreviewHolderView(
@@ -295,7 +302,7 @@ fun VideoPlayer(
     exoPlayer: ExoPlayer,
     ratio: Float,
     onPauseClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val validRatio = if (ratio.isNaN() || ratio <= 0) 1f else ratio
     val aspectRatioModifier = if (validRatio > 1) {

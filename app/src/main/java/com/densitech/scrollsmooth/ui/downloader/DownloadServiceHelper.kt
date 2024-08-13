@@ -8,8 +8,13 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
-import androidx.media3.exoplayer.RenderersFactory
-import androidx.media3.exoplayer.offline.*
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.offline.Download
+import androidx.media3.exoplayer.offline.DownloadHelper
+import androidx.media3.exoplayer.offline.DownloadIndex
+import androidx.media3.exoplayer.offline.DownloadManager
+import androidx.media3.exoplayer.offline.DownloadRequest
+import androidx.media3.exoplayer.offline.DownloadService
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -42,7 +47,8 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
     }
 
     // For this version, only support download for single file only
-    fun downloadClick(mediaItem: MediaItem, factory: RenderersFactory) {
+    fun downloadClick(mediaItem: MediaItem) {
+        val renderersFactory = DefaultRenderersFactory(context)
         val download = downloads[mediaItem.localConfiguration?.uri]
         if (download != null && download.state != Download.STATE_FAILED) {
             DownloadService.sendRemoveDownload(
@@ -55,7 +61,7 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
         }
 
         val downloadHelper =
-            DownloadHelper.forMediaItem(context, mediaItem, factory, dataSourceFactory)
+            DownloadHelper.forMediaItem(context, mediaItem, renderersFactory, dataSourceFactory)
         mediaItemNeedDownload = mediaItem
         downloadHelper.prepare(this)
     }
@@ -102,7 +108,10 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
 
     private fun startDownload(helper: DownloadHelper) {
         DownloadService.sendAddDownload(
-            context, SmoothScrollDownloadService::class.java, buildDownloadRequest(helper),  /* foreground= */false
+            context,
+            SmoothScrollDownloadService::class.java,
+            buildDownloadRequest(helper),  /* foreground= */
+            false
         )
     }
 
