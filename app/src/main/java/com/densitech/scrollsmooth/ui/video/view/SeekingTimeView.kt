@@ -11,7 +11,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.densitech.scrollsmooth.ui.utils.formatTime
-import java.util.Locale
 
 @Composable
 fun SeekingTimeView(currentPosition: Long, duration: Long, modifier: Modifier = Modifier) {

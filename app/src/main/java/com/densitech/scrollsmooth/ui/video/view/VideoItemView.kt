@@ -2,39 +2,25 @@ package com.densitech.scrollsmooth.ui.video.view
 
 import android.annotation.SuppressLint
 import androidx.annotation.OptIn
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.MediaSource
+import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
+import com.densitech.scrollsmooth.ui.video.model.MediaInfo
 import com.densitech.scrollsmooth.ui.video.model.MediaThumbnailDetail
 import com.densitech.scrollsmooth.ui.video.prefetch.PlayerPool
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel.Companion.MAX_DURATION_TIME_TO_SEEK
@@ -48,16 +34,24 @@ fun VideoItemView(
     isActive: Boolean,
     currentToken: Int,
     currentMediaSource: MediaSource,
-    thumbnailDetailList: List<MediaThumbnailDetail>,
-    currentRatio: Pair<Int, Int>,
+    mediaInfo: MediaInfo,
+    isDownloaded: Boolean,
     onReceiveRatio: (Int, Int, Int) -> Unit,
     onPlayerReady: (Int, ExoPlayer?) -> Unit,
     onPlayerDestroy: (Int) -> Unit,
     onPauseClick: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    onDownloadVideoClick: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
-    var ratio by remember { mutableStateOf(currentRatio) }
+    var ratio by remember {
+        mutableStateOf(
+            Pair(
+                mediaInfo.metadata.width.toInt(),
+                mediaInfo.metadata.height.toInt()
+            )
+        )
+    }
     var isInView by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableFloatStateOf(0F) }
     var isDraggingSlider by remember { mutableStateOf(false) }
@@ -66,9 +60,9 @@ fun VideoItemView(
     var onSeekingCurrentDurationPercent by remember { mutableFloatStateOf(0F) }
     var currentPreviewOffsetXFrame by remember { mutableFloatStateOf(0F) }
 
-    val nearestThumbnail by remember(onSeekingCurrentDuration, thumbnailDetailList) {
+    val nearestThumbnail by remember(onSeekingCurrentDuration, mediaInfo.thumbnails.medium) {
         derivedStateOf {
-            thumbnailDetailList.findLast { it.time * 1000 <= onSeekingCurrentDuration }
+            mediaInfo.thumbnails.medium.findLast { it.time * 1000 <= onSeekingCurrentDuration }
         }
     }
 
@@ -81,7 +75,7 @@ fun VideoItemView(
     fun updatePreviewOffset(
         onSeekingCurrentDurationPercent: Float,
         screenWidthDp: Int,
-        itemWidthDp: Int
+        itemWidthDp: Int,
     ): Float {
         val screenWidthPx = with(currentDensity) { screenWidthDp.dp.toPx() }
         val itemWidthPx = with(currentDensity) { itemWidthDp.dp.toPx() }
@@ -163,17 +157,25 @@ fun VideoItemView(
     }
 
     exoPlayer?.let { player ->
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+        ConstraintLayout(
+            modifier = modifier.fillMaxSize()
         ) {
+            val (videoView, thumbnailView, sliderView, actionView, contentView) = createRefs()
+
             VideoPlayer(
                 exoPlayer = player,
                 ratio = ratio.first / ratio.second.toFloat(),
                 onPauseClick = {
                     onPauseClick.invoke(!player.playWhenReady)
                 },
-                modifier = modifier
+                modifier = modifier.constrainAs(videoView) {
+                    start.linkTo(parent.start)
+                    end.linkTo(parent.end)
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                }
             )
 
             if (isDraggingSlider) {
@@ -183,7 +185,12 @@ fun VideoItemView(
                     duration = onSeekingCurrentDuration,
                     modifier = Modifier
                         .padding(bottom = ThumbnailPadding)
-                        .align(Alignment.BottomStart)
+                        .constrainAs(thumbnailView) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(sliderView.top)
+                            width = Dimension.fillToConstraints
+                        }
                 )
             }
 
@@ -192,7 +199,12 @@ fun VideoItemView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(heightOfSlider)
-                        .align(Alignment.BottomCenter),
+                        .constrainAs(sliderView) {
+                            start.linkTo(parent.start)
+                            end.linkTo(parent.end)
+                            bottom.linkTo(parent.bottom)
+                            width = Dimension.fillToConstraints
+                        },
                     currentValue = currentPosition,
                     onValueChange = {
                         player.seekTo((it * player.duration).toLong())
@@ -208,6 +220,50 @@ fun VideoItemView(
                     }
                 )
             }
+
+            if (!isDraggingSlider) {
+                VideoActionView(
+                    token = currentToken,
+                    likeCount = 10,
+                    commentCount = 10,
+                    shareCount = 10,
+                    isDownloaded = isDownloaded,
+                    onLikeClick = {},
+                    onCommentClick = {},
+                    onShareClick = {},
+                    onDownloadClick = {
+                        onDownloadVideoClick.invoke(currentToken)
+                    },
+                    modifier = Modifier
+                        .constrainAs(actionView) {
+                            end.linkTo(parent.end, 16.dp)
+                            bottom.linkTo(parent.bottom, 30.dp)
+                        }
+                )
+
+                OwnerSectionView(
+                    owner = mediaInfo.owner.name,
+                    content = mediaInfo.title,
+                    tags = mediaInfo.tags,
+                    onOwnerClick = { owner ->
+                        // Handle navigate to owner account here
+                        println(owner)
+                    },
+                    onTagClick = { tag ->
+                        // Handle navigate to tag search here
+                        println(tag)
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp)
+                        .constrainAs(contentView) {
+                            start.linkTo(parent.start)
+                            end.linkTo(actionView.start)
+                            bottom.linkTo(parent.bottom)
+                            width = Dimension.fillToConstraints
+                        }
+                )
+            }
         }
     }
 }
@@ -217,7 +273,7 @@ fun ThumbnailPreviewView(
     nearestThumbnail: MediaThumbnailDetail?,
     duration: Long,
     currentPreviewOffsetXFrame: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (nearestThumbnail != null) {
         PreviewHolderView(
@@ -234,7 +290,7 @@ fun VideoPlayer(
     exoPlayer: ExoPlayer,
     ratio: Float,
     onPauseClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val validRatio = if (ratio.isNaN() || ratio <= 0) 1f else ratio
     val aspectRatioModifier = if (validRatio > 1) {
@@ -247,10 +303,7 @@ fun VideoPlayer(
         player = exoPlayer,
         surfaceType = SURFACE_TYPE_SURFACE_VIEW,
         modifier = aspectRatioModifier
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) {
+            .clickableNoRipple {
                 exoPlayer.run {
                     playWhenReady = !playWhenReady
                     onPauseClick.invoke()
@@ -263,4 +316,4 @@ fun VideoPlayer(
 private val SliderHeightDefault = 2.dp
 private val SliderHeightDragged = 30.dp
 private const val ItemCount = 5
-private val ThumbnailPadding = 30.dp
+private val ThumbnailPadding = 10.dp

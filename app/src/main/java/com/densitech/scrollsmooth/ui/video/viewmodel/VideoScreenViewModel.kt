@@ -11,6 +11,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.Log
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cronet.CronetDataSource
@@ -20,13 +21,17 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.preload.DefaultPreloadManager
 import androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Status.STAGE_LOADED_TO_POSITION_MS
 import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
-import com.densitech.scrollsmooth.ui.video.model.MediaThumbnail
-import com.densitech.scrollsmooth.ui.video.model.MediaThumbnailDetail
+import com.densitech.scrollsmooth.ui.downloader.DownloadManagerSingleton
+import com.densitech.scrollsmooth.ui.downloader.DownloadServiceHelper
+import com.densitech.scrollsmooth.ui.downloader.DownloadVideoCache
+import com.densitech.scrollsmooth.ui.video.model.MediaInfo
+import com.densitech.scrollsmooth.ui.video.model.MediaSourceState
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
 import com.densitech.scrollsmooth.ui.video.prefetch.CacheSingleton
 import com.densitech.scrollsmooth.ui.video.prefetch.MediaItemSource
@@ -45,7 +50,7 @@ import kotlin.math.abs
 @UnstableApi
 @HiltViewModel
 class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: GetVideosUseCase = GetVideosUseCase()) :
-    ViewModel() {
+    ViewModel(), DownloadServiceHelper.Listener {
     private val _playList: MutableStateFlow<List<MediaItem>> = MutableStateFlow(listOf())
 
     private val _playerPool: MutableStateFlow<PlayerPool?> = MutableStateFlow(null)
@@ -55,8 +60,15 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
     val mediaItemSource = _mediaItemSource.asStateFlow()
 
     private val _screenState: MutableStateFlow<ScreenState> =
-        MutableStateFlow(ScreenState.BUFFER_STATE)
+        MutableStateFlow(ScreenState.LOADING_STATE)
     val screenState = _screenState.asStateFlow()
+
+    private val _mediaSourceState: MutableStateFlow<MediaSourceState> =
+        MutableStateFlow(MediaSourceState.REMOTE_SOURCE)
+    val mediaSourceState = _mediaSourceState.asStateFlow()
+
+    private val _videoDownloadedList: MutableStateFlow<List<String>> = MutableStateFlow(emptyList())
+    val videoDownloadedList = _videoDownloadedList.asStateFlow()
 
     private lateinit var preloadManager: DefaultPreloadManager
     private val currentMediaItemsAndIndexes: ArrayDeque<Pair<MediaItem, Int>> = ArrayDeque()
@@ -64,6 +76,11 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
     private val holderRatioMap: MutableMap<Int, Pair<Int, Int>> = mutableMapOf()
     var currentPlayingIndex: Int = C.INDEX_UNSET
         private set
+
+    private val playbackThread: HandlerThread =
+        HandlerThread("playback-thread", Process.THREAD_PRIORITY_AUDIO)
+
+    private lateinit var downloadServiceHelper: DownloadServiceHelper
 
     companion object {
         private const val TAG = "VideoScreenViewModel"
@@ -76,41 +93,20 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         private const val NUMBER_OF_PLAYERS = 7
         const val MAX_DURATION_TIME_TO_SEEK = 15000
         const val EXTRAS_METADATA = "metadata"
-        const val EXTRAS_THUMBNAILS = "thumbnails"
-        const val EXTRAS_PREVIEWS = "previews"
+        const val CACHED_DOWNLOAD_FOLDER = "video_cached"
+        const val DOWNLOAD_FOLDER = "video_downloaded"
     }
 
     init {
         viewModelScope.launch {
-            loadVideos()
-        }
-    }
+            val remoteVideoList = getRemoteVideos()
+            if (remoteVideoList.isEmpty()) {
+                _screenState.value = ScreenState.OFFLINE_REQUEST_STATE
+                return@launch
+            }
 
-    private val playbackThread: HandlerThread =
-        HandlerThread("playback-thread", Process.THREAD_PRIORITY_AUDIO)
-
-    private suspend fun loadVideos() {
-        val videoResponse = getVideosUseCase.fetchVideos()
-        val mediaItems = arrayListOf<MediaItem>()
-        for (video in videoResponse) {
-            val metaData = MediaMetadata.Builder()
-                .setExtras(Bundle().apply {
-                    putString(EXTRAS_METADATA, Json.encodeToString(video.metadata))
-                    putString(EXTRAS_THUMBNAILS, Json.encodeToString(video.thumbnails))
-                    putString(EXTRAS_PREVIEWS, Json.encodeToString(video.previews))
-                }).build()
-            val mediaItem =
-                MediaItem.Builder().setUri(video.videoUrl)
-                    .setMediaMetadata(metaData)
-                    .setMediaId(video.videoId).build()
-            mediaItems.add(mediaItem)
+            buildMediaItemList(remoteVideoList)
         }
-
-        val updatedList = _playList.value.toMutableList().apply {
-            addAll(mediaItems)
-        }
-        _playList.value = updatedList
-        _mediaItemSource.value = MediaItemSource(_playList.value)
     }
 
     fun initData(context: Context) {
@@ -155,7 +151,6 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
             .setCache(cache)
             .setCacheWriteDataSinkFactory(cacheSink)
             .setUpstreamDataSourceFactory(cronetDataSourceFactory)
-            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR or CacheDataSource.FLAG_BLOCK_ON_CACHE)
 
         preloadManager = DefaultPreloadManager(
             DefaultPreloadControl(),
@@ -172,9 +167,44 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         }
 
         preloadManager.invalidate()
+
+        // Init download
+        downloadServiceHelper =
+            DownloadServiceHelper(
+                context,
+                cronetDataSourceFactory,
+                DownloadManagerSingleton.getInstance(context)
+            )
+        _videoDownloadedList.value = downloadServiceHelper.getDownloadedVideo().map { it.videoUrl }
     }
 
-    fun getMediaSourceByMediaItem(mediaItem: MediaItem, index: Int): MediaSource? {
+    fun downloadVideo(index: Int) {
+        val mediaItem = _mediaItemSource.value?.mediaItems?.get(index) ?: return
+        downloadServiceHelper.downloadClick(mediaItem)
+    }
+
+    fun getMediaSourceByMediaItem(
+        context: Context,
+        mediaItem: MediaItem,
+        index: Int
+    ): MediaSource? {
+        if (_mediaSourceState.value == MediaSourceState.LOCAL_SOURCE) {
+            val cache = DownloadVideoCache.getInstance(context)
+            val cronetEngine = CronetEngine.Builder(context).build()
+            val cronetDataSourceFactory = CronetDataSource.Factory(
+                cronetEngine,
+                Executors.newSingleThreadExecutor()
+            )
+
+            val cacheDataSourceFactory: DataSource.Factory =
+                CacheDataSource.Factory()
+                    .setCache(cache)
+                    .setUpstreamDataSourceFactory(cronetDataSourceFactory)
+                    .setCacheWriteDataSinkFactory(null) // Disable writing.
+
+            return ProgressiveMediaSource.Factory(cacheDataSourceFactory)
+                .createMediaSource(mediaItem)
+        }
         var mediaSource: MediaSource? = null
         if (this::preloadManager.isInitialized) {
             mediaSource = preloadManager.getMediaSource(mediaItem)
@@ -194,14 +224,11 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         holderRatioMap[token] = Pair(width, height)
     }
 
-    fun getCurrentThumbnail(mediaMetadata: MediaMetadata): List<MediaThumbnailDetail> {
-        val thumbnailStr = mediaMetadata.extras?.getString(EXTRAS_THUMBNAILS) ?: return emptyList()
-        val thumbnail = Json.decodeFromString<MediaThumbnail>(thumbnailStr)
-        if (thumbnail.small.isEmpty()) {
-            return emptyList()
-        }
-
-        return thumbnail.medium
+    fun getCurrentMediaInfo(mediaMetadata: MediaMetadata): MediaInfo {
+        val mediaInfoStr = mediaMetadata.extras?.getString(EXTRAS_METADATA)
+            ?: throw Exception("MediaInfo not found")
+        val mediaInfo = Json.decodeFromString<MediaInfo>(mediaInfoStr)
+        return mediaInfo
     }
 
     fun getCurrentRatio(token: Int, mediaMetadata: MediaMetadata): Pair<Int, Int> {
@@ -268,6 +295,36 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         preloadManager.invalidate()
     }
 
+    fun loadRemoteVideoList() {
+        viewModelScope.launch {
+            _screenState.value = ScreenState.LOADING_STATE
+            val remoteVideoList = getRemoteVideos()
+            if (remoteVideoList.isEmpty()) {
+                _screenState.value = ScreenState.OFFLINE_REQUEST_STATE
+                return@launch
+            }
+
+            buildMediaItemList(remoteVideoList)
+        }
+    }
+
+    fun loadDownloadedVideoList() {
+        viewModelScope.launch {
+            _screenState.value = ScreenState.LOADING_STATE
+            _mediaSourceState.value = MediaSourceState.LOCAL_SOURCE
+            val remoteVideoList = getDownloadedVideos()
+            buildMediaItemList(remoteVideoList)
+        }
+    }
+
+    fun registerDownloadState() {
+        downloadServiceHelper.addListener(this)
+    }
+
+    fun unRegisterDownloadState() {
+        downloadServiceHelper.removeListener(this)
+    }
+
     private fun addMediaItem(index: Int, isAddingToRight: Boolean) {
         val mediaItems = mediaItemSource.value?.mediaItems ?: return
         if (index < 0 || mediaItems.isEmpty()) {
@@ -298,6 +355,37 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         preloadManager.remove(itemAndIndex.first)
     }
 
+    private fun getDownloadedVideos(): List<MediaInfo> {
+        return downloadServiceHelper.getDownloadedVideo()
+    }
+
+    private suspend fun getRemoteVideos(): List<MediaInfo> {
+        return getVideosUseCase.fetchVideos()
+    }
+
+    private fun buildMediaItemList(videoList: List<MediaInfo>) {
+        val mediaItems = arrayListOf<MediaItem>()
+        for (video in videoList) {
+            val metaData = MediaMetadata.Builder()
+                .setTitle(video.title)
+                .setExtras(Bundle().apply {
+                    putString(EXTRAS_METADATA, Json.encodeToString(video))
+                }).build()
+            val mediaItem =
+                MediaItem.Builder().setUri(video.videoUrl)
+                    .setMediaMetadata(metaData)
+                    .setMediaId(video.videoUrl).build()
+            mediaItems.add(mediaItem)
+        }
+
+        val updatedList = _playList.value.toMutableList().apply {
+            addAll(mediaItems)
+        }
+        _playList.value = updatedList
+        _mediaItemSource.value = MediaItemSource(_playList.value)
+        _screenState.value = ScreenState.BUFFER_STATE
+    }
+
     inner class DefaultPreloadControl : TargetPreloadStatusControl<Int> {
         override fun getTargetPreloadStatus(rankingData: Int): TargetPreloadStatusControl.PreloadStatus? {
             if (abs(rankingData - currentPlayingIndex) == 2) {
@@ -307,5 +395,21 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
             }
             return null
         }
+    }
+
+    override fun onDownloadCompleted(videoId: String) {
+        val updatedList = _videoDownloadedList.value.toMutableList().apply {
+            if (!contains(videoId)) {
+                add(videoId)
+            }
+        }
+        _videoDownloadedList.value = updatedList
+    }
+
+    override fun onDownloadRemoved(videoId: String) {
+        val updatedList = _videoDownloadedList.value.toMutableList().apply {
+            remove(videoId)
+        }
+        _videoDownloadedList.value = updatedList
     }
 }

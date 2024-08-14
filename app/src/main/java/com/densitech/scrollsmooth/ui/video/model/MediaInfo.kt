@@ -11,7 +11,10 @@ data class MediaInfo(
     @SerialName("video_url")
     val videoUrl: String,
     @SerialName("metadata")
-    val metadata: MediaMetadata?,
-    val thumbnails: MediaThumbnail?,
-    val previews: List<MediaPreview>
+    val metadata: MediaMetadata,
+    val thumbnails: MediaThumbnail,
+    val previews: List<MediaPreview>,
+    val title: String,
+    val tags: List<String>,
+    val owner: MediaOwner,
 )

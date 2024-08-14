@@ -36,6 +36,19 @@ android {
     }
     kotlinOptions {
         jvmTarget = "1.8"
+        allWarningsAsErrors = false
+        freeCompilerArgs = listOf(
+            "-opt-in=androidx.compose.animation.ExperimentalAnimationApi",
+            "-opt-in=androidx.compose.material.ExperimentalMaterialApi",
+            "-opt-in=androidx.compose.runtime.ExperimentalComposeApi",
+            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
+            "-opt-in=com.google.accompanist.navigation.material.ExperimentalMaterialNavigationApi",
+            "-opt-in=com.google.accompanist.pager.ExperimentalPagerApi",
+            "-opt-in=com.google.accompanist.permissions.ExperimentalPermissionsApi",
+            "-opt-in=kotlin.ExperimentalUnsignedTypes",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-opt-in=kotlinx.coroutines.InternalCoroutinesApi"
+        )
     }
     buildFeatures {
         compose = true
@@ -60,6 +73,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.constraintlayout.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -76,4 +90,5 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.serialization)
     implementation(libs.coil)
+    implementation(libs.permission)
 }

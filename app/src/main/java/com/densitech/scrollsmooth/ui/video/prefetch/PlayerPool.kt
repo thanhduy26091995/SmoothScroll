@@ -5,12 +5,8 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.Player
-import androidx.media3.database.StandaloneDatabaseProvider
-import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
-import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.cronet.CronetDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
@@ -23,7 +19,6 @@ import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.Maps
 import org.chromium.net.CronetEngine
-import java.io.File
 import java.util.Collections
 import java.util.LinkedList
 import java.util.Queue
@@ -143,8 +138,6 @@ class PlayerPool(
                 .setCache(cache)
                 .setCacheWriteDataSinkFactory(cacheSink)
                 .setUpstreamDataSourceFactory(cronetDataSourceFactory)
-                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-
 
             val player = ExoPlayer.Builder(context)
                 .setPlaybackLooper(playbackLooper)
@@ -162,30 +155,6 @@ class PlayerPool(
             playerCounter++
             player.repeatMode = ExoPlayer.REPEAT_MODE_ONE
             return player
-        }
-
-        @Synchronized
-        private fun getDownloadCache(context: Context): Cache {
-            val databaseProvider = StandaloneDatabaseProvider(context)
-            val downloadDirectory = File(context.cacheDir, "media_cache")
-            if (!downloadDirectory.exists()) {
-                val created = downloadDirectory.mkdirs()
-                if (!created) {
-                    throw IllegalStateException("Failed to create cache directory: ${downloadDirectory.absolutePath}")
-                }
-            }
-//            val cacheDir = File(Util.createTempFile(context, "CacheDir"), "cache")
-//            if (!cacheDir.exists()) {
-//                cacheDir.mkdirs()
-//            }
-            val maxBytes = 50 * 1024 * 1024L
-            val cache =
-                SimpleCache(
-                    downloadDirectory,
-                    LeastRecentlyUsedCacheEvictor(maxBytes),
-                    databaseProvider
-                )
-            return cache
         }
     }
 }
