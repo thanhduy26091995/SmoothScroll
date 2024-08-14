@@ -34,6 +34,7 @@ import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -49,15 +50,21 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
     val mediaItemSource = videoScreenViewModel.mediaItemSource.collectAsState()
     val playerPool = videoScreenViewModel.playerPool.collectAsState()
     val screenState = videoScreenViewModel.screenState.collectAsState()
+    val videoDownloadedListState = videoScreenViewModel.videoDownloadedList.collectAsState()
+
     var currentActiveIndex by remember {
         mutableIntStateOf(videoScreenViewModel.currentPlayingIndex)
     }
-    var isPause by remember {
+    var isPaused by remember {
         mutableStateOf(false)
     }
 
     val mediaList = remember {
         mutableStateListOf<MediaItem>()
+    }
+
+    val downloadedVideoList = remember {
+        mutableStateListOf<String>()
     }
 
     val fling = PagerDefaults.flingBehavior(
@@ -69,7 +76,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
 
     val notificationPermission = rememberPermissionState(
         permission = android.Manifest.permission.POST_NOTIFICATIONS,
-        onPermissionResult = { isGrant ->
+        onPermissionResult = { _ ->
             // Handle permission result
         }
     )
@@ -78,19 +85,33 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
 
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_START) {
-                // Play latest video if needed
-                val currentPlayingIndex = videoScreenViewModel.currentPlayingIndex
-                if (currentPlayingIndex == -1) {
-                    return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_START -> {
+                    // Register download listener
+                    videoScreenViewModel.registerDownloadState()
+                    // Play latest video if needed
+                    val currentPlayingIndex = videoScreenViewModel.currentPlayingIndex
+                    if (currentPlayingIndex == -1) {
+                        return@LifecycleEventObserver
+                    }
+                    videoScreenViewModel.play(currentPlayingIndex)
                 }
-                videoScreenViewModel.play(currentPlayingIndex)
-            } else if (event == Lifecycle.Event.ON_STOP) {
-                videoScreenViewModel.pauseAllPlayer()
-            } else if (event == Lifecycle.Event.ON_CREATE) {
-                videoScreenViewModel.pauseAllPlayer()
-                if (mediaItemSource.value?.mediaItems.isNullOrEmpty()) {
-                    videoScreenViewModel.initData(context)
+
+                Lifecycle.Event.ON_STOP -> {
+                    videoScreenViewModel.pauseAllPlayer()
+                    // Unregister download state
+                    videoScreenViewModel.unRegisterDownloadState()
+                }
+
+                Lifecycle.Event.ON_CREATE -> {
+                    videoScreenViewModel.pauseAllPlayer()
+                    if (mediaItemSource.value?.mediaItems.isNullOrEmpty()) {
+                        videoScreenViewModel.initData(context)
+                    }
+                }
+
+                else -> {
+
                 }
             }
         }
@@ -100,6 +121,11 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
         onDispose {
             lifeCycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+    LaunchedEffect(videoDownloadedListState.value) {
+        downloadedVideoList.clear()
+        downloadedVideoList.addAll(videoDownloadedListState.value)
     }
 
     LaunchedEffect(mediaItemSource.value?.mediaItems) {
@@ -130,12 +156,11 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                 currentActiveIndex = realPage
                 videoScreenViewModel.play(realPage)
 
-                isPause = false
+                isPaused = false
             }
         }
     }
 
-    println(screenState.value)
     when (screenState.value) {
         ScreenState.LOADING_STATE -> {
             LoadingScreen()
@@ -157,7 +182,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                         val realPage = page % totalPageCount
                         val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
                         val mediaSource =
-                            videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
+                            videoScreenViewModel.getMediaSourceByMediaItem(context, mediaItem, realPage)
                                 ?: return@VerticalPager
 
                         // Ensure playerPool.value is not null
@@ -171,7 +196,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                             currentToken = realPage,
                             currentMediaSource = mediaSource,
                             mediaInfo = mediaInfo,
-                            isDownloaded = videoScreenViewModel.isVideoDownloaded(mediaItem),
+                            isDownloaded = downloadedVideoList.contains(mediaItem.localConfiguration?.uri.toString()),
                             onPlayerReady = { token, exoPlayer ->
                                 videoScreenViewModel.onPlayerReady(token, exoPlayer)
                             },
@@ -182,19 +207,10 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                                 videoScreenViewModel.onReceiveRatio(token, width, height)
                             },
                             onPauseClick = {
-                                isPause = it
+                                isPaused = it
                             },
                             onDownloadVideoClick = { token ->
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    // Handle download video here, but need to check permission first
-                                    if (!notificationPermission.status.isGranted) {
-                                        notificationPermission.launchPermissionRequest()
-                                    } else {
-                                        // Start to download
-                                        videoScreenViewModel.downloadVideo(token)
-                                    }
-                                } else {
-                                    // Start to download
+                                handleDownloadVideoClick(notificationPermission) {
                                     videoScreenViewModel.downloadVideo(token)
                                 }
                             },
@@ -204,7 +220,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                     }
 
                     AnimatedVisibility(
-                        visible = isPause,
+                        visible = isPaused,
                         modifier = Modifier.align(Alignment.Center)
                     ) {
                         Icon(
@@ -223,7 +239,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
         ScreenState.OFFLINE_REQUEST_STATE -> {
             DialogConfirmSwitchOffline(
                 dialogTitle = "Can't fetch video from network",
-                dialogText = "Click 'Retry' to retry a network call, click 'Offline' to switch to Offlfine Mode",
+                dialogText = "Click 'Retry' to retry a network call, click 'Offline' to switch to Offline Mode",
                 dialogConfirmText = "Offline",
                 dialogDismissText = "Retry",
                 onRetryClick = {
@@ -233,5 +249,23 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                     videoScreenViewModel.loadDownloadedVideoList()
                 })
         }
+    }
+}
+
+private fun handleDownloadVideoClick(
+    notificationPermission: PermissionState,
+    onDownload: () -> Unit
+) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        // Handle download video here, but need to check permission first
+        if (!notificationPermission.status.isGranted) {
+            notificationPermission.launchPermissionRequest()
+        } else {
+            // Start to download
+            onDownload.invoke()
+        }
+    } else {
+        // Start to download
+        onDownload.invoke()
     }
 }

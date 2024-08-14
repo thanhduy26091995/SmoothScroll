@@ -2,6 +2,7 @@ package com.densitech.scrollsmooth.ui.downloader
 
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
@@ -24,7 +25,9 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
 ) : DownloadHelper.Callback {
 
     interface Listener {
-        fun onDownloadsChanged()
+        fun onDownloadCompleted(videoId: String)
+
+        fun onDownloadRemoved(videoId: String)
     }
 
     private val listeners: CopyOnWriteArraySet<Listener> = CopyOnWriteArraySet()
@@ -34,6 +37,7 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
     private val downloadedVideoList: ArrayList<MediaInfo> = arrayListOf()
 
     init {
+        downloadManager.addListener(DownloadManagerState())
         loadDownloads()
     }
 
@@ -63,6 +67,8 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
             DownloadHelper.forMediaItem(context, mediaItem, renderersFactory, dataSourceFactory)
         mediaItemNeedDownload = mediaItem
         downloadHelper.prepare(this)
+
+        Toast.makeText(context, "Downloading video", Toast.LENGTH_LONG).show()
     }
 
     override fun onPrepared(helper: DownloadHelper) {
@@ -90,7 +96,7 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
     }
 
     override fun onPrepareError(helper: DownloadHelper, e: IOException) {
-        TODO("Not yet implemented")
+        Toast.makeText(context, e.message, Toast.LENGTH_LONG).show()
     }
 
     private fun loadDownloads() {
@@ -144,5 +150,29 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
             }
         }
         return null
+    }
+
+    inner class DownloadManagerState : DownloadManager.Listener {
+        override fun onDownloadChanged(
+            downloadManager: DownloadManager,
+            download: Download,
+            finalException: java.lang.Exception?
+        ) {
+            super.onDownloadChanged(downloadManager, download, finalException)
+            if (download.state == Download.STATE_COMPLETED) {
+                downloads[download.request.uri] = download
+                for (listener in listeners) {
+                    listener.onDownloadCompleted(download.request.id)
+                }
+            }
+        }
+
+        override fun onDownloadRemoved(downloadManager: DownloadManager, download: Download) {
+            super.onDownloadRemoved(downloadManager, download)
+            downloads.remove(download.request.uri)
+            for (listener in listeners) {
+                listener.onDownloadRemoved(download.request.id)
+            }
+        }
     }
 }

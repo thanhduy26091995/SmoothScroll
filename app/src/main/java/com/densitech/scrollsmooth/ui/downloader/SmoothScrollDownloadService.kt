@@ -28,7 +28,6 @@ class SmoothScrollDownloadService : DownloadService(
         private const val FOREGROUND_NOTIFICATION_ID = 1
         private const val DEFAULT_FOREGROUND_NOTIFICATION_UPDATE_INTERVAL = 1000L
         private const val DOWNLOAD_NOTIFICATION_CHANNEL_ID = "download_channel"
-        const val DOWNLOAD_FOLDER = "video_downloaded"
     }
 
     override fun getDownloadManager(): DownloadManager {

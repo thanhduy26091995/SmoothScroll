@@ -6,3 +6,8 @@ enum class ScreenState {
     PLAY_STATE,
     OFFLINE_REQUEST_STATE
 }
+
+enum class MediaSourceState {
+    REMOTE_SOURCE,
+    LOCAL_SOURCE
+}
