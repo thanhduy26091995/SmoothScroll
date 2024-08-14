@@ -12,6 +12,8 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
 import com.densitech.scrollsmooth.R
+import com.densitech.scrollsmooth.ui.video.model.MediaInfo
+import kotlinx.serialization.json.Json
 
 @UnstableApi
 class SmoothScrollDownloadService : DownloadService(
@@ -84,22 +86,27 @@ class SmoothScrollDownloadService : DownloadService(
             finalException: Exception?
         ) {
             if (download.state == Download.STATE_COMPLETED) {
+                val downloadDataStr = Util.fromUtf8Bytes(download.request.data)
+                val mediaInfo = Json.decodeFromString<MediaInfo>(downloadDataStr)
                 notification = notificationHelper.buildDownloadCompletedNotification(
                     context,
                     R.drawable.ic_download_done,  /* contentIntent= */
                     null,
-                    Util.fromUtf8Bytes(download.request.data)
+                    mediaInfo.title
                 )
                 NotificationUtil.setNotification(context, nextNotificationId++, notification)
                 return
             }
 
             if (download.state == Download.STATE_FAILED) {
+                val downloadDataStr = Util.fromUtf8Bytes(download.request.data)
+                val mediaInfo = Json.decodeFromString<MediaInfo>(downloadDataStr)
+
                 notification = notificationHelper.buildDownloadFailedNotification(
                     context,
                     R.drawable.ic_download_done,
                     null,
-                    Util.fromUtf8Bytes(download.request.data)
+                    mediaInfo.title
                 )
                 NotificationUtil.setNotification(context, nextNotificationId++, notification)
                 return

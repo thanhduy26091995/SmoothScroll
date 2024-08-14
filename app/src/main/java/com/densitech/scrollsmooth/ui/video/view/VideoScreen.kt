@@ -17,17 +17,7 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -145,81 +135,103 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
         }
     }
 
-    if (mediaList.size > 0) {
-        val totalPageCount = remember(mediaList) { mediaList.size }
+    println(screenState.value)
+    when (screenState.value) {
+        ScreenState.LOADING_STATE -> {
+            LoadingScreen()
+        }
 
-        Box {
-            VerticalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black),
-                beyondBoundsPageCount = 1,
-                flingBehavior = fling
-            ) { page ->
-                val realPage = page % totalPageCount
-                val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
-                val mediaSource =
-                    videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
-                        ?: return@VerticalPager
+        ScreenState.BUFFER_STATE, ScreenState.PLAY_STATE -> {
+            if (mediaList.size > 0) {
+                val totalPageCount = remember(mediaList) { mediaList.size }
 
-                // Ensure playerPool.value is not null
-                val currentPlayerPool = playerPool.value ?: return@VerticalPager
-                val mediaInfo =
-                    videoScreenViewModel.getCurrentMediaInfo(mediaItem.mediaMetadata)
+                Box {
+                    VerticalPager(
+                        state = pagerState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black),
+                        beyondBoundsPageCount = 1,
+                        flingBehavior = fling
+                    ) { page ->
+                        val realPage = page % totalPageCount
+                        val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
+                        val mediaSource =
+                            videoScreenViewModel.getMediaSourceByMediaItem(mediaItem, realPage)
+                                ?: return@VerticalPager
 
-                VideoItemView(
-                    playerPool = currentPlayerPool,
-                    isActive = currentActiveIndex == realPage,
-                    currentToken = realPage,
-                    currentMediaSource = mediaSource,
-                    mediaInfo = mediaInfo,
-                    onPlayerReady = { token, exoPlayer ->
-                        videoScreenViewModel.onPlayerReady(token, exoPlayer)
-                    },
-                    onPlayerDestroy = { token ->
-                        videoScreenViewModel.onPlayerDestroy(token)
-                    },
-                    onReceiveRatio = { token, width, height ->
-                        videoScreenViewModel.onReceiveRatio(token, width, height)
-                    },
-                    onPauseClick = {
-                        isPause = it
-                    },
-                    onDownloadVideoClick = { token ->
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            // Handle download video here, but need to check permission first
-                            if (!notificationPermission.status.isGranted) {
-                                notificationPermission.launchPermissionRequest()
-                            } else {
-                                // Start to download
-                                videoScreenViewModel.downloadVideo(token)
-                            }
-                        } else {
-                            // Start to download
-                            videoScreenViewModel.downloadVideo(token)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
-            }
+                        // Ensure playerPool.value is not null
+                        val currentPlayerPool = playerPool.value ?: return@VerticalPager
+                        val mediaInfo =
+                            videoScreenViewModel.getCurrentMediaInfo(mediaItem.mediaMetadata)
 
-            AnimatedVisibility(
-                visible = isPause,
-                modifier = Modifier.align(Alignment.Center)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_play_arrow_24),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(96.dp)
-                        .align(Alignment.Center)
-                        .alpha(0.2f),
-                )
+                        VideoItemView(
+                            playerPool = currentPlayerPool,
+                            isActive = currentActiveIndex == realPage,
+                            currentToken = realPage,
+                            currentMediaSource = mediaSource,
+                            mediaInfo = mediaInfo,
+                            isDownloaded = videoScreenViewModel.isVideoDownloaded(mediaItem),
+                            onPlayerReady = { token, exoPlayer ->
+                                videoScreenViewModel.onPlayerReady(token, exoPlayer)
+                            },
+                            onPlayerDestroy = { token ->
+                                videoScreenViewModel.onPlayerDestroy(token)
+                            },
+                            onReceiveRatio = { token, width, height ->
+                                videoScreenViewModel.onReceiveRatio(token, width, height)
+                            },
+                            onPauseClick = {
+                                isPause = it
+                            },
+                            onDownloadVideoClick = { token ->
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    // Handle download video here, but need to check permission first
+                                    if (!notificationPermission.status.isGranted) {
+                                        notificationPermission.launchPermissionRequest()
+                                    } else {
+                                        // Start to download
+                                        videoScreenViewModel.downloadVideo(token)
+                                    }
+                                } else {
+                                    // Start to download
+                                    videoScreenViewModel.downloadVideo(token)
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = isPause,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_play_arrow_24),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(96.dp)
+                                .align(Alignment.Center)
+                                .alpha(0.2f),
+                        )
+                    }
+                }
             }
         }
-    } else {
-        LoadingScreen()
+
+        ScreenState.OFFLINE_REQUEST_STATE -> {
+            DialogConfirmSwitchOffline(
+                dialogTitle = "Can't fetch video from network",
+                dialogText = "Click 'Retry' to retry a network call, click 'Offline' to switch to Offlfine Mode",
+                dialogConfirmText = "Offline",
+                dialogDismissText = "Retry",
+                onRetryClick = {
+                    videoScreenViewModel.loadRemoteVideoList()
+                },
+                onSwitchOfflineClick = {
+                    videoScreenViewModel.loadDownloadedVideoList()
+                })
+        }
     }
 }

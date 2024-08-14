@@ -23,6 +23,7 @@ fun VideoActionView(
     likeCount: Int,
     commentCount: Int,
     shareCount: Int,
+    isDownloaded: Boolean,
     onLikeClick: (Int) -> Unit,
     onCommentClick: (Int) -> Unit,
     onShareClick: (Int) -> Unit,
@@ -56,14 +57,16 @@ fun VideoActionView(
             modifier = Modifier.padding(top = 10.dp),
         )
 
-        VideoActionItemView(
-            icon = painterResource(id = R.drawable.ic_download_for_offline),
-            value = "",
-            onItemClick = {
-                onDownloadClick(token)
-            },
-            modifier = Modifier.padding(top = 10.dp),
-        )
+        if (!isDownloaded) {
+            VideoActionItemView(
+                icon = painterResource(id = R.drawable.ic_download_for_offline),
+                value = "",
+                onItemClick = {
+                    onDownloadClick(token)
+                },
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
     }
 }
 
@@ -99,13 +102,21 @@ private fun VideoActionItemView(
 @Composable
 @Preview
 private fun VideoActionViewPreview() {
-    VideoActionView(token = 1, likeCount = 10, commentCount = 10, shareCount = 10, {
+    VideoActionView(
+        token = 1,
+        likeCount = 10,
+        commentCount = 10,
+        shareCount = 10,
+        isDownloaded = false, {
 
-    }, {
+        },
+        {
 
-    }, {
+        },
+        {
 
-    }, {
+        },
+        {
 
-    })
+        })
 }

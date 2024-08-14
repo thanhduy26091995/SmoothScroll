@@ -9,12 +9,10 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
-import androidx.media3.exoplayer.offline.Download
-import androidx.media3.exoplayer.offline.DownloadHelper
-import androidx.media3.exoplayer.offline.DownloadIndex
-import androidx.media3.exoplayer.offline.DownloadManager
-import androidx.media3.exoplayer.offline.DownloadRequest
-import androidx.media3.exoplayer.offline.DownloadService
+import androidx.media3.exoplayer.offline.*
+import com.densitech.scrollsmooth.ui.video.model.MediaInfo
+import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
+import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArraySet
 
@@ -33,6 +31,7 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
     private val downloads: HashMap<Uri, Download> = HashMap()
     private var downloadIndex: DownloadIndex = downloadManager.downloadIndex
     private var mediaItemNeedDownload: MediaItem? = null
+    private val downloadedVideoList: ArrayList<MediaInfo> = arrayListOf()
 
     init {
         loadDownloads()
@@ -80,6 +79,16 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
         }
     }
 
+    fun isDownloaded(mediaItem: MediaItem): Boolean {
+        val uri = mediaItem.localConfiguration?.uri ?: return false
+        val download = downloads[uri]
+        return download != null && download.state != Download.STATE_FAILED
+    }
+
+    fun getDownloadedVideo(): List<MediaInfo> {
+        return downloadedVideoList
+    }
+
     override fun onPrepareError(helper: DownloadHelper, e: IOException) {
         TODO("Not yet implemented")
     }
@@ -89,6 +98,9 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
             val loadedDownloads = downloadIndex.getDownloads()
             while (loadedDownloads.moveToNext()) {
                 val download = loadedDownloads.download
+                val downloadDataStr = Util.fromUtf8Bytes(download.request.data)
+                val mediaInfo = Json.decodeFromString<MediaInfo>(downloadDataStr)
+                downloadedVideoList.add(mediaInfo)
                 downloads[download.request.uri] = download
             }
         } catch (e: Exception) {
@@ -97,13 +109,13 @@ class DownloadServiceHelper @OptIn(UnstableApi::class) constructor(
     }
 
     private fun buildDownloadRequest(helper: DownloadHelper): DownloadRequest {
-        if (mediaItemNeedDownload == null) {
-            throw Exception("No MediaItem to download")
+        mediaItemNeedDownload?.mediaMetadata?.extras?.let { bundle ->
+            val mediaInfoStr = bundle.getString(VideoScreenViewModel.EXTRAS_METADATA) ?: return@let
+            return helper.getDownloadRequest(
+                Util.getUtf8Bytes(mediaInfoStr)
+            )
         }
-
-        return helper.getDownloadRequest(
-            Util.getUtf8Bytes(checkNotNull(mediaItemNeedDownload!!.mediaMetadata.title.toString()))
-        )
+        throw Exception("No MediaItem to download")
     }
 
     private fun startDownload(helper: DownloadHelper) {

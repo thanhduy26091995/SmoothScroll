@@ -56,7 +56,7 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
     val mediaItemSource = _mediaItemSource.asStateFlow()
 
     private val _screenState: MutableStateFlow<ScreenState> =
-        MutableStateFlow(ScreenState.BUFFER_STATE)
+        MutableStateFlow(ScreenState.LOADING_STATE)
     val screenState = _screenState.asStateFlow()
 
     private lateinit var preloadManager: DefaultPreloadManager
@@ -87,7 +87,13 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
 
     init {
         viewModelScope.launch {
-            loadVideos()
+            val remoteVideoList = getRemoteVideos()
+            if (remoteVideoList.isEmpty()) {
+                _screenState.value = ScreenState.OFFLINE_REQUEST_STATE
+                return@launch
+            }
+
+            buildMediaItemList(remoteVideoList)
         }
     }
 
@@ -158,6 +164,10 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
                 cronetDataSourceFactory,
                 DownloadManagerSingleton.getInstance(context)
             )
+    }
+
+    fun isVideoDownloaded(mediaItem: MediaItem): Boolean {
+        return downloadServiceHelper.isDownloaded(mediaItem)
     }
 
     fun downloadVideo(index: Int) {
@@ -256,6 +266,27 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         preloadManager.invalidate()
     }
 
+    fun loadRemoteVideoList() {
+        viewModelScope.launch {
+            _screenState.value = ScreenState.LOADING_STATE
+            val remoteVideoList = getRemoteVideos()
+            if (remoteVideoList.isEmpty()) {
+                _screenState.value = ScreenState.OFFLINE_REQUEST_STATE
+                return@launch
+            }
+
+            buildMediaItemList(remoteVideoList)
+        }
+    }
+
+    fun loadDownloadedVideoList() {
+        viewModelScope.launch {
+            _screenState.value = ScreenState.LOADING_STATE
+            val remoteVideoList = getDownloadedVideos()
+            buildMediaItemList(remoteVideoList)
+        }
+    }
+
     private fun addMediaItem(index: Int, isAddingToRight: Boolean) {
         val mediaItems = mediaItemSource.value?.mediaItems ?: return
         if (index < 0 || mediaItems.isEmpty()) {
@@ -286,10 +317,17 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         preloadManager.remove(itemAndIndex.first)
     }
 
-    private suspend fun loadVideos() {
-        val videoResponse = getVideosUseCase.fetchVideos()
+    private suspend fun getDownloadedVideos(): List<MediaInfo> {
+        return downloadServiceHelper.getDownloadedVideo()
+    }
+
+    private suspend fun getRemoteVideos(): List<MediaInfo> {
+        return getVideosUseCase.fetchVideos()
+    }
+
+    private fun buildMediaItemList(videoList: List<MediaInfo>) {
         val mediaItems = arrayListOf<MediaItem>()
-        for (video in videoResponse) {
+        for (video in videoList) {
             val metaData = MediaMetadata.Builder()
                 .setTitle(video.title)
                 .setExtras(Bundle().apply {
@@ -298,7 +336,7 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
             val mediaItem =
                 MediaItem.Builder().setUri(video.videoUrl)
                     .setMediaMetadata(metaData)
-                    .setMediaId(video.videoId).build()
+                    .setMediaId(video.videoUrl).build()
             mediaItems.add(mediaItem)
         }
 
@@ -307,6 +345,7 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
         }
         _playList.value = updatedList
         _mediaItemSource.value = MediaItemSource(_playList.value)
+        _screenState.value = ScreenState.BUFFER_STATE
     }
 
     inner class DefaultPreloadControl : TargetPreloadStatusControl<Int> {
