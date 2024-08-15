@@ -34,6 +34,16 @@ The app expects responses from the server (Fetched from JSON file) in the follow
     "video_id": "24a0033e-0e0c-42c4-9f3a-1f0ce9d1a1d8",
     "processing_status": "completed",
     "video_url": "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/videos/video_1.mp4",
+    "title": "Video title",
+    "tags": [
+        "Tag A",
+        "TAG B",
+        "TAG C"
+    ],
+    "owner": {
+        "name": "Name of video owner",
+        "email": "Email"
+    },
     "metadata": {
         "duration": 25000,
         "width": 480.0,
@@ -46,15 +56,13 @@ The app expects responses from the server (Fetched from JSON file) in the follow
             {
                 "thumbnailUrl": "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/thumbnails/video_1/small/thumbnail_0.jpg",
                 "time": 0
-            },
-            // more thumbnail objects
+            }
         ],
         "medium": [
             {
                 "thumbnailUrl": "https://storage.googleapis.com/smoothscroll-7252a.appspot.com/thumbnails/video_1/medium/thumbnail_0.jpg",
                 "time": 0
-            },
-            // more thumbnail objects
+            }
         ]
     },
     "previews": []
@@ -68,3 +76,9 @@ The app expects responses from the server (Fetched from JSON file) in the follow
 - metadata: Contains details about the video such as duration, width, height, bitrate, and codec.
 - thumbnails: Provides URLs for thumbnails of the video at various intervals and sizes (small, medium).
 - previews: Additional preview information (currently not used in this version, will support for DASH and HLS format).
+- title: Video title
+- tags: List tag of this video
+- owner: Owner who post video
+
+# Author
+Dennis (Duy) Bui (https://www.linkedin.com/in/duy-bui-4bb54b143/)
