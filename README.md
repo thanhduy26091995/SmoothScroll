@@ -82,3 +82,7 @@ The app expects responses from the server (Fetched from JSON file) in the follow
 
 # Author
 Dennis (Duy) Bui (https://www.linkedin.com/in/duy-bui-4bb54b143/)
+
+# Noted
+- On this project, I don't focus on architecture, so when you guys apply to real project, consider to move it to correct module
+- Content video of streaming will use open source Video
