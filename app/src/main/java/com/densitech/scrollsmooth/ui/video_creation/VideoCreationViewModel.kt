@@ -4,20 +4,30 @@ import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.media.MediaMetadataRetriever
 import android.provider.MediaStore
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoCreationViewModel @Inject constructor() : ViewModel() {
 
+    private val _localVideos: MutableStateFlow<List<DTOLocalVideo>> = MutableStateFlow(emptyList())
+    val localVideos = _localVideos.asStateFlow()
+
+    // Init caching
+    private val cacheSize = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()
+    val videoCachingThumbnail = VideoThumbnailCache(cacheSize)
+
     fun getAllVideos(context: Context) {
         val projection = arrayOf(
             MediaStore.Video.Media._ID,
             MediaStore.Video.Media.DISPLAY_NAME,
-            MediaStore.Video.Media.DATA
+            MediaStore.Video.Media.DATA,
+            MediaStore.Video.Media.DURATION
         )
 
         val cursor = context.contentResolver.query(
@@ -28,23 +38,52 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
             null
         )
 
+        val localVideos = arrayListOf<DTOLocalVideo>()
+
         cursor?.use {
             val idColumn = it.getColumnIndex(MediaStore.Video.Media._ID)
             val nameColumn = it.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME)
             val dataColumn = it.getColumnIndex(MediaStore.Video.Media.DATA)
+            val durationColumn = it.getColumnIndex(MediaStore.Video.Media.DURATION)
 
             while (it.moveToNext()) {
                 val id = it.getLong(idColumn)
                 val name = it.getString(nameColumn)
                 val dataStr = it.getString(dataColumn)
+                val duration = it.getString(durationColumn)
 
-                Log.d("VideoInfo", "ID: $id, Name: $name, Path: $dataStr")
-
-                if (id == 1000000045L) {
-                    extractFramesFromVideo(context, dataStr)
+                // Check if the thumbnail is in the cache
+                var thumbnail = videoCachingThumbnail[dataStr]
+                if (thumbnail == null) {
+                    val retriever = MediaMetadataRetriever()
+                    retriever.setDataSource(dataStr)
+                    thumbnail = retriever.frameAtTime
+                    if (thumbnail != null) {
+                        videoCachingThumbnail.put(dataStr, thumbnail)
+                    }
+                    retriever.release()
                 }
+
+                localVideos.add(
+                    DTOLocalVideo(
+                        id = id,
+                        videoName = name,
+                        videoPath = dataStr,
+                        duration = duration
+                    )
+                )
+                localVideos.add(
+                    DTOLocalVideo(
+                        id = id,
+                        videoName = name,
+                        videoPath = dataStr,
+                        duration = duration
+                    )
+                )
             }
         }
+
+        _localVideos.value = localVideos
     }
 
     fun extractFramesFromVideo(context: Context, videoPath: String) {
@@ -84,10 +123,22 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
                 if (inputBuffer != null) {
                     val sampleSize = mediaExtractor.readSampleData(inputBuffer, 0)
                     if (sampleSize < 0) {
-                        mediaCodec.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                        mediaCodec.queueInputBuffer(
+                            inputBufferIndex,
+                            0,
+                            0,
+                            0,
+                            MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                        )
                         break
                     } else {
-                        mediaCodec.queueInputBuffer(inputBufferIndex, 0, sampleSize, mediaExtractor.sampleTime, 0)
+                        mediaCodec.queueInputBuffer(
+                            inputBufferIndex,
+                            0,
+                            sampleSize,
+                            mediaExtractor.sampleTime,
+                            0
+                        )
                         mediaExtractor.advance()
                     }
                 }
