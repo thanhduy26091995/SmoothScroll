@@ -5,20 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -30,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun VideoTrimming(
+fun VideoTrimmingView(
     videoDuration: Long,
     onTrimChange: (Long, Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -56,13 +45,9 @@ fun VideoTrimming(
             ((endTrim / videoDuration.toFloat()) * timelineWidth - handleWidthPx / 2).toDp()
         }
 
-        val sliderWidthDp = with(density) {
-            handleWidthPx.toDp()
-        }
-
         Box(
             modifier = Modifier
-                .offset(x = startTrimOffsetDp + sliderWidthDp)
+                .offset(x = startTrimOffsetDp + handleWidth)
                 .width(endTrimOffsetDp - startTrimOffsetDp - handleWidth)
                 .height(40.dp)
                 .drawBehind {
@@ -131,7 +116,7 @@ fun VideoTrimming(
 @Composable
 @Preview
 fun VideoTrimmingPReview() {
-    VideoTrimming(videoDuration = 10000, onTrimChange = { _, _ ->
+    VideoTrimmingView(videoDuration = 10000, onTrimChange = { _, _ ->
 
     })
 }
