@@ -18,6 +18,9 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
     private val _localVideos: MutableStateFlow<List<DTOLocalVideo>> = MutableStateFlow(emptyList())
     val localVideos = _localVideos.asStateFlow()
 
+    private val _selectedVideo: MutableStateFlow<DTOLocalVideo?> = MutableStateFlow(null)
+    val selectedVideo = _selectedVideo.asStateFlow()
+
     // Init caching
     private val cacheSize = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()
     val videoCachingThumbnail = VideoThumbnailCache(cacheSize)
@@ -27,7 +30,8 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
             MediaStore.Video.Media._ID,
             MediaStore.Video.Media.DISPLAY_NAME,
             MediaStore.Video.Media.DATA,
-            MediaStore.Video.Media.DURATION
+            MediaStore.Video.Media.DURATION,
+            MediaStore.Video.Media.RESOLUTION
         )
 
         val cursor = context.contentResolver.query(
@@ -45,12 +49,18 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
             val nameColumn = it.getColumnIndex(MediaStore.Video.Media.DISPLAY_NAME)
             val dataColumn = it.getColumnIndex(MediaStore.Video.Media.DATA)
             val durationColumn = it.getColumnIndex(MediaStore.Video.Media.DURATION)
+            val resolutionColumn = it.getColumnIndex(MediaStore.Video.Media.RESOLUTION)
 
             while (it.moveToNext()) {
                 val id = it.getLong(idColumn)
                 val name = it.getString(nameColumn)
                 val dataStr = it.getString(dataColumn)
                 val duration = it.getString(durationColumn)
+                val resolution = it.getString(resolutionColumn)
+                val width = resolution.split("×").first()
+                val height = resolution.split("×").last()
+
+                println(resolution)
 
                 // Check if the thumbnail is in the cache
                 var thumbnail = videoCachingThumbnail[dataStr]
@@ -69,21 +79,22 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
                         id = id,
                         videoName = name,
                         videoPath = dataStr,
-                        duration = duration
-                    )
-                )
-                localVideos.add(
-                    DTOLocalVideo(
-                        id = id,
-                        videoName = name,
-                        videoPath = dataStr,
-                        duration = duration
+                        duration = duration,
+                        width = width.toInt(),
+                        height = height.toInt()
                     )
                 )
             }
         }
 
         _localVideos.value = localVideos
+        if (localVideos.isNotEmpty()) {
+            _selectedVideo.value = localVideos.first()
+        }
+    }
+
+    fun onVideoClick(data: DTOLocalVideo) {
+        _selectedVideo.value = data
     }
 
     fun extractFramesFromVideo(context: Context, videoPath: String) {

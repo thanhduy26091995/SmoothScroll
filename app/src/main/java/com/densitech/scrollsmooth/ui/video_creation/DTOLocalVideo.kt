@@ -5,4 +5,6 @@ data class DTOLocalVideo(
     val videoName: String,
     val duration: String,
     val videoPath: String,
+    val width: Int,
+    val height: Int
 )

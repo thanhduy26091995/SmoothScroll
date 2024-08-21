@@ -13,11 +13,19 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 import com.densitech.scrollsmooth.ui.utils.formatTime
 
 @Composable
-fun VideoCreationItemView(data: DTOLocalVideo, thumbnail: Bitmap?, modifier: Modifier = Modifier) {
-    Box(modifier = modifier) {
+fun VideoCreationItemView(
+    data: DTOLocalVideo,
+    thumbnail: Bitmap?,
+    onVideoClick: (DTOLocalVideo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.clickableNoRipple {
+        onVideoClick.invoke(data)
+    }) {
         Image(
             bitmap = thumbnail!!.asImageBitmap(),
             contentDescription = null,
