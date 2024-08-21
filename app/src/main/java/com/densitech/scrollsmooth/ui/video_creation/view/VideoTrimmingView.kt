@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video_creation
+package com.densitech.scrollsmooth.ui.video_creation.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

@@ -1,12 +1,14 @@
-package com.densitech.scrollsmooth.ui.video_creation
+package com.densitech.scrollsmooth.ui.video_creation.viewmodel
 
 import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
+import android.os.Build
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
+import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +41,7 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
             projection,
             null,
             null,
-            null
+            "${MediaStore.Video.Media.DATE_ADDED} DESC"
         )
 
         val localVideos = arrayListOf<DTOLocalVideo>()
@@ -60,14 +62,22 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
                 val width = resolution.split("×").first()
                 val height = resolution.split("×").last()
 
-                println(resolution)
-
                 // Check if the thumbnail is in the cache
                 var thumbnail = videoCachingThumbnail[dataStr]
                 if (thumbnail == null) {
                     val retriever = MediaMetadataRetriever()
                     retriever.setDataSource(dataStr)
-                    thumbnail = retriever.frameAtTime
+                    thumbnail = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        retriever.getScaledFrameAtTime(
+                            1000,
+                            MediaMetadataRetriever.OPTION_CLOSEST,
+                            512,
+                            512
+                        )
+                    } else {
+                        retriever.frameAtTime
+                    }
+
                     if (thumbnail != null) {
                         videoCachingThumbnail.put(dataStr, thumbnail)
                     }

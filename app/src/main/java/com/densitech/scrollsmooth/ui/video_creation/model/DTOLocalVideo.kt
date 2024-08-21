@@ -1,5 +1,8 @@
-package com.densitech.scrollsmooth.ui.video_creation
+package com.densitech.scrollsmooth.ui.video_creation.model
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class DTOLocalVideo(
     val id: Long,
     val videoName: String,

@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video_creation
+package com.densitech.scrollsmooth.ui.video_creation.viewmodel
 
 import android.graphics.Bitmap
 import androidx.collection.LruCache
