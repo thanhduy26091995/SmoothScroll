@@ -8,10 +8,14 @@ import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,6 +26,9 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
 
     private val _selectedVideo: MutableStateFlow<DTOLocalVideo?> = MutableStateFlow(null)
     val selectedVideo = _selectedVideo.asStateFlow()
+
+    private val _isProcessedThumbnail: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isProcessedThumbnail = _isProcessedThumbnail.asStateFlow()
 
     // Init caching
     private val cacheSize = (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()
@@ -62,28 +69,6 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
                 val width = resolution.split("×").first()
                 val height = resolution.split("×").last()
 
-                // Check if the thumbnail is in the cache
-                var thumbnail = videoCachingThumbnail[dataStr]
-                if (thumbnail == null) {
-                    val retriever = MediaMetadataRetriever()
-                    retriever.setDataSource(dataStr)
-                    thumbnail = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        retriever.getScaledFrameAtTime(
-                            1000,
-                            MediaMetadataRetriever.OPTION_CLOSEST,
-                            512,
-                            512
-                        )
-                    } else {
-                        retriever.frameAtTime
-                    }
-
-                    if (thumbnail != null) {
-                        videoCachingThumbnail.put(dataStr, thumbnail)
-                    }
-                    retriever.release()
-                }
-
                 localVideos.add(
                     DTOLocalVideo(
                         id = id,
@@ -98,6 +83,7 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
         }
 
         _localVideos.value = localVideos
+        processThumbnail()
         if (localVideos.isNotEmpty()) {
             _selectedVideo.value = localVideos.first()
         }
@@ -191,5 +177,39 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
 
     private fun processFrame(frameData: ByteArray, frameCount: Int) {
         println("PROCESS FRAME with: ${frameCount}")
+    }
+
+    // Process thumbnail will take time, so we need to separate it as different process
+    private fun processThumbnail() {
+        viewModelScope.launch(Dispatchers.IO) {
+            for (video in _localVideos.value) {
+                // Check if the thumbnail is in the cache
+                var thumbnail = videoCachingThumbnail[video.videoPath]
+                if (thumbnail == null) {
+                    val retriever = MediaMetadataRetriever()
+                    retriever.setDataSource(video.videoPath)
+                    thumbnail = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        retriever.getScaledFrameAtTime(
+                            1000,
+                            MediaMetadataRetriever.OPTION_CLOSEST,
+                            512,
+                            512
+                        )
+                    } else {
+                        retriever.frameAtTime
+                    }
+
+                    if (thumbnail != null) {
+                        videoCachingThumbnail.put(video.videoPath, thumbnail)
+                    }
+                    retriever.release()
+                }
+            }
+
+            // Switch to main thread to update UI
+            withContext(Dispatchers.Main) {
+                _isProcessedThumbnail.value = true
+            }
+        }
     }
 }

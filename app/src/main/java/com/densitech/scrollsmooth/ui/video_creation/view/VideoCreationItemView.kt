@@ -37,12 +37,20 @@ fun VideoCreationItemView(
         .clickableNoRipple {
             onVideoClick.invoke(data)
         }) {
-        Image(
-            bitmap = thumbnail!!.asImageBitmap(),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        if (thumbnail == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.8f))
+            )
+        } else {
+            Image(
+                bitmap = thumbnail.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         Text(
             text = formatTime(data.duration.toLong()),

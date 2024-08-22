@@ -5,19 +5,9 @@ package com.densitech.scrollsmooth.ui.main
 import android.os.Build
 import androidx.annotation.OptIn
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -30,10 +20,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.densitech.scrollsmooth.ui.video.view.VideoScreen
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
 import com.densitech.scrollsmooth.ui.video_creation.view.VideoCreationScreen
@@ -45,12 +35,12 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 @OptIn(UnstableApi::class)
 @Composable
 fun MainScreen(
+    navController: NavHostController,
     videoScreenViewModel: VideoScreenViewModel = hiltViewModel(),
     videoCreationViewModel: VideoCreationViewModel = hiltViewModel(),
     videoTransformationViewModel: VideoTransformationViewModel = hiltViewModel(),
 ) {
     val tabTitles = listOf(Screen.Home, Screen.Search, Screen.Add, Screen.Profile)
-    val navController = rememberNavController()
 
     val homeVideoPagerState = rememberPagerState(
         pageCount = {
@@ -80,16 +70,20 @@ fun MainScreen(
 
         })
 
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
+            if (currentDestination?.route == Screen.Add.route || currentDestination?.route == Screen.VideoTransformation.route) {
+                return@Scaffold
+            }
+
             NavigationBar(
                 containerColor = Color.Black.copy(alpha = 0.1f),
                 modifier = Modifier.height(80.dp)
             ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-
                 tabTitles.forEach { screen ->
                     NavigationBarItem(
                         selected = currentDestination?.hierarchy?.any {
