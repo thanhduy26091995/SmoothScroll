@@ -84,7 +84,7 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
 
         _localVideos.value = localVideos
         processThumbnail()
-        if (localVideos.isNotEmpty()) {
+        if (localVideos.isNotEmpty() && _selectedVideo.value == null) {
             _selectedVideo.value = localVideos.first()
         }
     }
