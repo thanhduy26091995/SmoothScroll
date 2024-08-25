@@ -1,9 +1,6 @@
 package com.densitech.scrollsmooth.ui.video_creation.viewmodel
 
 import android.content.Context
-import android.media.MediaCodec
-import android.media.MediaExtractor
-import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.provider.MediaStore
@@ -91,92 +88,6 @@ class VideoCreationViewModel @Inject constructor() : ViewModel() {
 
     fun onVideoClick(data: DTOLocalVideo) {
         _selectedVideo.value = data
-    }
-
-    fun extractFramesFromVideo(context: Context, videoPath: String) {
-        val mediaExtractor = MediaExtractor()
-        mediaExtractor.setDataSource(videoPath)
-
-        var videoTrackIndex = -1
-        for (i in 0 until mediaExtractor.trackCount) {
-            val format = mediaExtractor.getTrackFormat(i)
-            val mimeType = format.getString(MediaFormat.KEY_MIME)
-            if (mimeType?.startsWith("video/") == true) {
-                videoTrackIndex = i
-                mediaExtractor.selectTrack(videoTrackIndex)
-                break
-            }
-        }
-
-        if (videoTrackIndex == -1) {
-            // No video track found
-            return
-        }
-
-        val format = mediaExtractor.getTrackFormat(videoTrackIndex)
-        val mimeType = format.getString(MediaFormat.KEY_MIME) ?: return
-
-        val mediaCodec = MediaCodec.createDecoderByType(mimeType)
-        mediaCodec.configure(format, null, null, 0)
-        mediaCodec.start()
-
-        val bufferInfo = MediaCodec.BufferInfo()
-        var frameCount = 0
-
-        while (true) {
-            val inputBufferIndex = mediaCodec.dequeueInputBuffer(10000)
-            if (inputBufferIndex >= 0) {
-                val inputBuffer = mediaCodec.getInputBuffer(inputBufferIndex)
-                if (inputBuffer != null) {
-                    val sampleSize = mediaExtractor.readSampleData(inputBuffer, 0)
-                    if (sampleSize < 0) {
-                        mediaCodec.queueInputBuffer(
-                            inputBufferIndex,
-                            0,
-                            0,
-                            0,
-                            MediaCodec.BUFFER_FLAG_END_OF_STREAM
-                        )
-                        break
-                    } else {
-                        mediaCodec.queueInputBuffer(
-                            inputBufferIndex,
-                            0,
-                            sampleSize,
-                            mediaExtractor.sampleTime,
-                            0
-                        )
-                        mediaExtractor.advance()
-                    }
-                }
-            }
-
-            val outputBufferIndex = mediaCodec.dequeueOutputBuffer(bufferInfo, 10000)
-            if (outputBufferIndex >= 0) {
-                val outputBuffer = mediaCodec.getOutputBuffer(outputBufferIndex)
-                if (outputBuffer != null) {
-                    val frameData = ByteArray(bufferInfo.size)
-                    outputBuffer.get(frameData)
-
-                    // Process the frame (e.g., save to file, display, etc.)
-                    processFrame(frameData, frameCount)
-                    frameCount++
-                }
-                mediaCodec.releaseOutputBuffer(outputBufferIndex, false)
-            } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                // Output buffers changed, nothing to do here
-            } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                // Output format changed, handle this if necessary
-            }
-        }
-
-        mediaCodec.stop()
-        mediaCodec.release()
-        mediaExtractor.release()
-    }
-
-    private fun processFrame(frameData: ByteArray, frameCount: Int) {
-        println("PROCESS FRAME with: ${frameCount}")
     }
 
     // Process thumbnail will take time, so we need to separate it as different process

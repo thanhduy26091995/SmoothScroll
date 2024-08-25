@@ -2,22 +2,28 @@
 
 package com.densitech.scrollsmooth.ui.video_transformation
 
+import android.content.Context
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -41,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -56,9 +64,8 @@ import androidx.navigation.NavController
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetCollapsed
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetContent
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetExpanded
+import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.format
-import com.densitech.scrollsmooth.ui.video.PlayerSurface
-import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
 import com.densitech.scrollsmooth.ui.video_creation.viewmodel.VideoCreationViewModel
 import kotlinx.coroutines.launch
 
@@ -70,17 +77,9 @@ fun VideoTransformationScreen(
     videoTransformationViewModel: VideoTransformationViewModel,
 ) {
     val selectedVideo by videoCreationViewModel.selectedVideo.collectAsState()
-
     val context = LocalContext.current
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            repeatMode = ExoPlayer.REPEAT_MODE_ONE
-            setMediaItem(MediaItem.fromUri(Uri.parse(selectedVideo?.videoPath)))
-            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-            prepare()
-            playWhenReady = true
-        }
-    }
+    val exoPlayer =
+        rememberExoPlayer(context = context, videoUri = Uri.parse(selectedVideo?.videoPath))
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
@@ -109,16 +108,17 @@ fun VideoTransformationScreen(
     }
 
     val localConfiguration = LocalConfiguration.current
-    val playerHeight = localConfiguration.screenHeightDp.dp - 72.dp
+    val playerHeight = localConfiguration.screenHeightDp.dp - 72.dp - 50.dp
+    val deviceWidth = localConfiguration.screenWidthDp.dp
 
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.PartiallyExpanded,
             skipHiddenState = true
-        ),
-
         )
+    )
+
     val offsetBottomSheet by remember(scaffoldState) {
         derivedStateOf {
             runCatching {
@@ -142,6 +142,13 @@ fun VideoTransformationScreen(
     val progress = remember { mutableFloatStateOf(0f) }
     val sheetOffset = remember { mutableFloatStateOf(-1f) }
 
+    LaunchedEffect(selectedVideo) {
+        selectedVideo?.let {
+            val thumbnails = videoTransformationViewModel.extractThumbnailsPerSecond(it.videoPath)
+            videoTransformationViewModel.updateThumbnailList(thumbnails)
+        }
+    }
+
     LaunchedEffect(scaffoldState.bottomSheetState) {
         snapshotFlow { offsetBottomSheet }.collect { offset ->
             if (sheetOffset.floatValue == -1f) {
@@ -163,7 +170,24 @@ fun VideoTransformationScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                    )
+                    ) {
+                        LazyRow(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .align(Alignment.Center)
+                        ) {
+                            items(videoTransformationViewModel.getThumbnailList()) {
+                                Image(
+                                    bitmap = it.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .width(30.dp),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        }
+                    }
                 }
 
                 SheetCollapsed(
@@ -176,7 +200,11 @@ fun VideoTransformationScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         TextButton(
-                            onClick = { /*TODO*/ },
+                            onClick = {
+                                scope.launch {
+                                    scaffoldState.bottomSheetState.expand()
+                                }
+                            },
                             modifier = Modifier
                                 .padding(16.dp)
                                 .clip(RoundedCornerShape(24.dp))
@@ -202,83 +230,68 @@ fun VideoTransformationScreen(
         },
         sheetPeekHeight = 72.dp
     ) { innerPadding ->
-        MainContent(
-            exoPlayer = exoPlayer,
-            onBackClick = {
-                navController.popBackStack()
-            },
+        Box(
             modifier = Modifier
-                .padding(top = 50.dp, bottom = 20.dp)
+                .padding(top = 50.dp)
                 .padding(innerPadding)
-                .fillMaxWidth()
-                .height(playerHeight * (1 - progress.floatValue))
-                .clip(RoundedCornerShape(24.dp)),
-        )
+                .fillMaxSize()
+        ) {
+            if (progress.floatValue > 0) {
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            scaffoldState.bottomSheetState.partialExpand()
+                        }
+                    }, modifier = Modifier
+                        .padding(top = 16.dp, start = 10.dp)
+                        .align(Alignment.TopStart)
+                        .clip(CircleShape)
+                        .background(Color.DarkGray)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand"
+                    )
+                }
+            }
+
+            MainPreviewContent(
+                exoPlayer = exoPlayer,
+                currentFraction = progress.floatValue,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                modifier = Modifier
+                    .width(deviceWidth * (1 - progress.floatValue))
+                    .height(playerHeight * (1 - progress.floatValue))
+                    .clip(RoundedCornerShape(24.dp))
+                    .align(Alignment.TopCenter)
+                    .then(
+                        if (progress.floatValue > 0f) {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = progress.floatValue + DEFAULT_FRACTION),
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
+            )
+        }
     }
 }
 
+@UnstableApi
 @Composable
-private fun VideoPlayerView(exoPlayer: ExoPlayer, modifier: Modifier = Modifier) {
-    PlayerSurface(
-        player = exoPlayer,
-        surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-        modifier = modifier
-            .fillMaxSize()
-    )
-}
-
-@Composable
-private fun MainContent(
-    exoPlayer: ExoPlayer,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-    ) {
-        VideoPlayerView(
-            exoPlayer = exoPlayer,
-            modifier = Modifier
-                .fillMaxSize()
-        )
-
-        IconButton(
-            onClick = {
-                onBackClick.invoke()
-            }, modifier = Modifier
-                .padding(top = 16.dp, start = 16.dp)
-                .align(Alignment.TopStart)
-                .clip(CircleShape)
-                .background(Color.DarkGray)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close"
-            )
+fun rememberExoPlayer(context: Context, videoUri: Uri): ExoPlayer {
+    return remember {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = ExoPlayer.REPEAT_MODE_ONE
+            setMediaItem(MediaItem.fromUri(videoUri))
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+            prepare()
+            playWhenReady = true
         }
-
-        IconButton(
-            onClick = {
-                onBackClick.invoke()
-            }, modifier = Modifier
-                .padding(top = 16.dp, end = 16.dp)
-                .align(Alignment.TopEnd)
-                .clip(CircleShape)
-                .background(Color.DarkGray)
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "More"
-            )
-        }
-
-        TransformationActionView(
-            onActionClick = {
-
-            }, modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.BottomStart)
-                .padding(bottom = 10.dp)
-        )
     }
 }

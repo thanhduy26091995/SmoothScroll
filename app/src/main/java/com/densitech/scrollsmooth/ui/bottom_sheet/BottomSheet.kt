@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
+import kotlin.math.abs
 
 @Composable
 fun SheetContent(
@@ -47,10 +48,10 @@ fun SheetCollapsed(
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val alpha = if (currentFraction <= 0.01) {
-        1f
-    } else {
-        1 - DEFAULT_FRACTION - currentFraction
+    val alpha = when {
+        currentFraction == 0f -> 1f
+        abs(DEFAULT_FRACTION - currentFraction) <= 0.1 -> 0f
+        else -> 1f - (DEFAULT_FRACTION + currentFraction)
     }
 
     Row(
