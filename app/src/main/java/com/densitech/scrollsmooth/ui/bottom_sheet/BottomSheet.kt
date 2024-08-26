@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
-import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 import kotlin.math.abs
 
 @Composable
@@ -32,37 +31,41 @@ fun SheetContent(
 
 @Composable
 fun SheetExpanded(
+    currentFraction: Float,
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
+    if (currentFraction < 0) {
+        return
+    }
+    val alpha = when {
+        currentFraction == 0f -> 0f
+        abs(DEFAULT_FRACTION - currentFraction) <= 0.1 -> 1f
+        else -> 1f - (DEFAULT_FRACTION + currentFraction)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer(alpha = alpha)
+    ) {
         content()
     }
 }
 
 @Composable
 fun SheetCollapsed(
-    isCollapsed: Boolean,
     currentFraction: Float,
-    onSheetClick: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val alpha = when {
-        currentFraction == 0f -> 1f
-        abs(DEFAULT_FRACTION - currentFraction) <= 0.1 -> 0f
-        else -> 1f - (DEFAULT_FRACTION + currentFraction)
-    }
-
-    Row(
-        modifier = modifier
-            .graphicsLayer(alpha = alpha)
-            .clickableNoRipple(
-                onClick = onSheetClick,
-                enabled = isCollapsed
-            ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        content()
+    // Hide view in case alpha = 0
+    if (currentFraction <= 0.01) {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            content()
+        }
     }
 }

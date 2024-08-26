@@ -5,9 +5,20 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -26,7 +37,7 @@ fun VideoTrimmingView(
 ) {
     var startTrim by remember { mutableLongStateOf(0L) }
     var endTrim by remember { mutableLongStateOf(videoDuration) }
-    val handleWidth = 16.dp
+    val handleWidth = 20.dp
 
     // This will allow us to get the width of the timeline
     BoxWithConstraints(
@@ -49,16 +60,16 @@ fun VideoTrimmingView(
             modifier = Modifier
                 .offset(x = startTrimOffsetDp + handleWidth)
                 .width(endTrimOffsetDp - startTrimOffsetDp - handleWidth)
-                .height(40.dp)
+                .height(56.dp)
                 .drawBehind {
                     drawRect(
-                        color = Color.Red,
+                        color = Color.Yellow,
                         topLeft = Offset(0f, 0f),
                         size = Size(size.width, 1.dp.toPx())
                     )
 
                     drawRect(
-                        color = Color.Red,
+                        color = Color.Yellow,
                         topLeft = Offset(0f, size.height - 1.dp.toPx()),
                         size = Size(size.width, 1.dp.toPx())
                     )
@@ -69,21 +80,26 @@ fun VideoTrimmingView(
         Box(
             modifier = Modifier
                 .offset(x = startTrimOffsetDp)
-                .size(handleWidth, 40.dp)
+                .size(handleWidth, 56.dp)
                 .border(
                     1.dp,
-                    Color.Red,
+                    Color.Yellow,
                     shape = RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp)
                 )
                 .clip(RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp))
-                .background(Color.Red)
+                .background(Color.Yellow)
                 .draggable(
                     orientation = Orientation.Horizontal,
                     state = rememberDraggableState { delta ->
                         val newTrim =
                             (startTrim + (delta / timelineWidth) * videoDuration).toLong()
                         startTrim = newTrim.coerceIn(0L, endTrim)
+                    },
+                    onDragStopped = {
                         onTrimChange(startTrim, endTrim)
+                    },
+                    onDragStarted = {
+                        println("ON DRAG START")
                     }
                 )
         )
@@ -92,21 +108,26 @@ fun VideoTrimmingView(
         Box(
             modifier = Modifier
                 .offset(x = endTrimOffsetDp)
-                .size(handleWidth, 40.dp)
+                .size(handleWidth, 56.dp)
                 .border(
                     1.dp,
-                    Color.Red,
+                    Color.Yellow,
                     shape = RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
                 )
                 .clip(RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))
-                .background(Color.Red)
+                .background(Color.Yellow)
                 .draggable(
                     orientation = Orientation.Horizontal,
                     state = rememberDraggableState { delta ->
                         val newTrim =
                             (endTrim + (delta / timelineWidth) * videoDuration).toLong()
                         endTrim = newTrim.coerceIn(startTrim, videoDuration)
+                    },
+                    onDragStopped = {
                         onTrimChange(startTrim, endTrim)
+                    },
+                    onDragStarted = {
+                        println("ON DRAG START")
                     }
                 )
         )
@@ -115,7 +136,7 @@ fun VideoTrimmingView(
 
 @Composable
 @Preview
-fun VideoTrimmingPReview() {
+fun VideoTrimmingPreview() {
     VideoTrimmingView(videoDuration = 10000, onTrimChange = { _, _ ->
 
     })

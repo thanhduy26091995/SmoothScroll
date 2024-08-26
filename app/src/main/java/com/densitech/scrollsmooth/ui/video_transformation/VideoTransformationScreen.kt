@@ -4,31 +4,48 @@ package com.densitech.scrollsmooth.ui.video_transformation
 
 import android.content.Context
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.C
@@ -53,9 +70,13 @@ fun VideoTransformationScreen(
 ) {
     val thumbnails by videoTransformationViewModel.thumbnails.collectAsState()
     val selectedVideo by videoCreationViewModel.selectedVideo.collectAsState()
+
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val localConfiguration = LocalConfiguration.current
     val exoPlayer =
         rememberExoPlayer(context = context, videoUri = Uri.parse(selectedVideo?.videoPath))
+    val trimmedHandler = Handler(Looper.getMainLooper())
 
     val lifeCycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifeCycleOwner) {
@@ -76,18 +97,15 @@ fun VideoTransformationScreen(
         }
 
         lifeCycleOwner.lifecycle.addObserver(observer)
-
         onDispose {
             exoPlayer.release()
             lifeCycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
-    val localConfiguration = LocalConfiguration.current
     val playerHeight = localConfiguration.screenHeightDp.dp - 72.dp - 50.dp
     val deviceWidth = localConfiguration.screenWidthDp.dp
 
-    val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(
             initialValue = SheetValue.PartiallyExpanded,
@@ -103,20 +121,38 @@ fun VideoTransformationScreen(
         }
     }
 
-    val bottomSheetRadius = 0.dp
+    val progress = rememberSaveable { mutableFloatStateOf(0f) }
+    val sheetOffset = rememberSaveable { mutableFloatStateOf(-1f) }
+    var trimRange by remember {
+        mutableStateOf(0L..selectedVideo!!.duration.toLong())
+    }
+    var isPlayingPreview by remember {
+        mutableStateOf(true)
+    }
 
-    val sheetToggle: () -> Unit = {
-        scope.launch {
-            if (!scaffoldState.bottomSheetState.hasExpandedState) {
-                scaffoldState.bottomSheetState.expand()
+    val checkPositionHandler = object : Runnable {
+        override fun run() {
+            if (exoPlayer.currentPosition >= trimRange.last) {
+                exoPlayer.pause()
+                trimmedHandler.removeCallbacks(this)
             } else {
-                scaffoldState.bottomSheetState.hide()
+                trimmedHandler.postDelayed(this, 1000)
             }
         }
     }
 
-    val progress = rememberSaveable { mutableFloatStateOf(0f) }
-    val sheetOffset = rememberSaveable { mutableFloatStateOf(-1f) }
+    fun playTrimmedVideo(trimRange: LongRange) {
+        exoPlayer.seekTo(trimRange.first)
+
+        exoPlayer.play()
+
+        // Use a Handler to check the player's position periodically
+        trimmedHandler.post(checkPositionHandler)
+    }
+
+    fun pauseTrimmedVideo() {
+        trimmedHandler.removeCallbacks(checkPositionHandler)
+    }
 
     LaunchedEffect(selectedVideo) {
         selectedVideo?.let {
@@ -129,7 +165,7 @@ fun VideoTransformationScreen(
             if (sheetOffset.floatValue == -1f) {
                 sheetOffset.floatValue = offset
             }
-            progress.floatValue = (1 - (offset / sheetOffset.floatValue)).format(5).toFloat()
+            progress.floatValue = (1 - (offset / sheetOffset.floatValue)).format(4).toFloat()
         }
     }
 
@@ -138,68 +174,45 @@ fun VideoTransformationScreen(
 
         },
         scaffoldState = scaffoldState,
-        sheetShape = RoundedCornerShape(topStart = bottomSheetRadius, topEnd = bottomSheetRadius),
         sheetContent = {
             SheetContent {
-                SheetExpanded {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        LazyRow(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .align(Alignment.Center)
-                        ) {
-                            items(thumbnails) {
-                                Image(
-                                    bitmap = it.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(30.dp),
-                                    contentScale = ContentScale.Crop
-                                )
+                SheetExpanded(
+                    currentFraction = progress.floatValue,
+                ) {
+                    SheetExpandedContentView(
+                        thumbnails = thumbnails,
+                        selectedVideo = selectedVideo!!,
+                        isVideoPlaying = isPlayingPreview,
+                        onPlayClick = {
+                            exoPlayer.playWhenReady = !exoPlayer.playWhenReady
+                            isPlayingPreview = exoPlayer.playWhenReady
+
+                            if (isPlayingPreview) {
+                                playTrimmedVideo(trimRange)
+                            } else {
+                                pauseTrimmedVideo()
                             }
+                        },
+                        onTrimChange = { start, end ->
+                            trimRange = LongRange(start, end)
                         }
-                    }
+                    )
                 }
 
                 SheetCollapsed(
-                    isCollapsed = !scaffoldState.bottomSheetState.isVisible,
-                    currentFraction = progress.floatValue,
-                    onSheetClick = sheetToggle
+                    currentFraction = progress.floatValue
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        TextButton(
-                            onClick = {
-                                scope.launch {
-                                    scaffoldState.bottomSheetState.expand()
-                                }
-                            },
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color.DarkGray),
-                            contentPadding = PaddingValues(vertical = 0.dp, horizontal = 24.dp)
-                        ) {
-                            Text("Edit Video", fontSize = 12.sp)
-                        }
-
-                        TextButton(
-                            onClick = { /*TODO*/ },
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color.Blue),
-                            contentPadding = PaddingValues(vertical = 0.dp, horizontal = 24.dp)
-                        ) {
-                            Text("Next")
-                        }
-                    }
+                    SheetCollapsedActionView(
+                        onEditVideoClick = {
+                            scope.launch {
+                                scaffoldState.bottomSheetState.expand()
+                            }
+                        },
+                        onNextVideoClick = {
+                            scope.launch {
+                                scaffoldState.bottomSheetState.expand()
+                            }
+                        })
                 }
             }
         },
