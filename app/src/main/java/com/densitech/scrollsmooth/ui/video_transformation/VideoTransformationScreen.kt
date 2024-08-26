@@ -8,41 +8,16 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,6 +51,7 @@ fun VideoTransformationScreen(
     videoCreationViewModel: VideoCreationViewModel,
     videoTransformationViewModel: VideoTransformationViewModel,
 ) {
+    val thumbnails by videoTransformationViewModel.thumbnails.collectAsState()
     val selectedVideo by videoCreationViewModel.selectedVideo.collectAsState()
     val context = LocalContext.current
     val exoPlayer =
@@ -139,13 +115,12 @@ fun VideoTransformationScreen(
         }
     }
 
-    val progress = remember { mutableFloatStateOf(0f) }
-    val sheetOffset = remember { mutableFloatStateOf(-1f) }
+    val progress = rememberSaveable { mutableFloatStateOf(0f) }
+    val sheetOffset = rememberSaveable { mutableFloatStateOf(-1f) }
 
     LaunchedEffect(selectedVideo) {
         selectedVideo?.let {
-            val thumbnails = videoTransformationViewModel.extractThumbnailsPerSecond(it.videoPath)
-            videoTransformationViewModel.updateThumbnailList(thumbnails)
+            videoTransformationViewModel.extractThumbnailsPerSecond(it)
         }
     }
 
@@ -176,7 +151,7 @@ fun VideoTransformationScreen(
                                 .height(40.dp)
                                 .align(Alignment.Center)
                         ) {
-                            items(videoTransformationViewModel.getThumbnailList()) {
+                            items(thumbnails) {
                                 Image(
                                     bitmap = it.asImageBitmap(),
                                     contentDescription = null,
@@ -268,9 +243,10 @@ fun VideoTransformationScreen(
                     .align(Alignment.TopCenter)
                     .then(
                         if (progress.floatValue > 0f) {
+                            val alpha = (progress.floatValue + DEFAULT_FRACTION).coerceIn(0f, 1f)
                             Modifier.border(
                                 width = 1.dp,
-                                color = Color.White.copy(alpha = progress.floatValue + DEFAULT_FRACTION),
+                                color = Color.White.copy(alpha = alpha),
                                 shape = RoundedCornerShape(24.dp)
                             )
                         } else {
