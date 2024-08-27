@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video_transformation
+package com.densitech.scrollsmooth.ui.video_transformation.view
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -20,12 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.exoplayer.ExoPlayer
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
+import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
 
 @Composable
 fun MainPreviewContent(
     exoPlayer: ExoPlayer,
     currentFraction: Float,
     onBackClick: () -> Unit,
+    onActionClick: (TransformationAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -73,9 +75,8 @@ fun MainPreviewContent(
             }
 
             TransformationActionView(
-                onActionClick = {
-
-                }, modifier = Modifier
+                onActionClick = onActionClick,
+                modifier = Modifier
                     .padding(horizontal = 16.dp)
                     .align(Alignment.BottomStart)
                     .padding(bottom = 10.dp)

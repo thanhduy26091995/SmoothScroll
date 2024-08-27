@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video_transformation
+package com.densitech.scrollsmooth.ui.video_transformation.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
+import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
 
 @Composable
 fun TransformationActionView(

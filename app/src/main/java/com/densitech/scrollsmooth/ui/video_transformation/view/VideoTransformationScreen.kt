@@ -1,6 +1,6 @@
 @file:kotlin.OptIn(ExperimentalMaterial3Api::class)
 
-package com.densitech.scrollsmooth.ui.video_transformation
+package com.densitech.scrollsmooth.ui.video_transformation.view
 
 import android.content.Context
 import android.net.Uri
@@ -9,35 +9,14 @@ import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +29,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
@@ -59,6 +39,8 @@ import com.densitech.scrollsmooth.ui.bottom_sheet.SheetExpanded
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.format
 import com.densitech.scrollsmooth.ui.video_creation.viewmodel.VideoCreationViewModel
+import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
+import com.densitech.scrollsmooth.ui.video_transformation.viewmodel.VideoTransformationViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(UnstableApi::class)
@@ -74,8 +56,13 @@ fun VideoTransformationScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localConfiguration = LocalConfiguration.current
+
     val exoPlayer =
-        rememberExoPlayer(context = context, videoUri = Uri.parse(selectedVideo?.videoPath))
+        rememberExoPlayer(
+            context = context,
+            videoUri = Uri.parse(selectedVideo?.videoPath),
+            onVideoStateChanged = {})
+
     val trimmedHandler = Handler(Looper.getMainLooper())
 
     val lifeCycleOwner = LocalLifecycleOwner.current
@@ -103,6 +90,7 @@ fun VideoTransformationScreen(
         }
     }
 
+    // Sub for padding and peek height
     val playerHeight = localConfiguration.screenHeightDp.dp - 72.dp - 50.dp
     val deviceWidth = localConfiguration.screenWidthDp.dp
 
@@ -126,37 +114,72 @@ fun VideoTransformationScreen(
     var trimRange by remember {
         mutableStateOf(0L..selectedVideo!!.duration.toLong())
     }
-    var isPlayingPreview by remember {
+    var isPlayingPreview by rememberSaveable {
         mutableStateOf(true)
+    }
+    var isDraggingTrim by rememberSaveable {
+        mutableStateOf(false)
+    }
+    var currentPosition by rememberSaveable {
+        mutableLongStateOf(0L)
+    }
+    var onSeekingPosition by rememberSaveable {
+        mutableLongStateOf(0L)
     }
 
     val checkPositionHandler = object : Runnable {
         override fun run() {
-            if (exoPlayer.currentPosition >= trimRange.last) {
-                exoPlayer.pause()
-                trimmedHandler.removeCallbacks(this)
+            currentPosition = exoPlayer.currentPosition.coerceIn(trimRange.first, trimRange.last)
+            if (currentPosition >= trimRange.last) {
+                isPlayingPreview = false
             } else {
                 trimmedHandler.postDelayed(this, 1000)
             }
         }
     }
 
-    fun playTrimmedVideo(trimRange: LongRange) {
-        exoPlayer.seekTo(trimRange.first)
-
+    fun playTrimmedVideo(currentPosition: Long) {
+        exoPlayer.seekTo(currentPosition)
         exoPlayer.play()
-
         // Use a Handler to check the player's position periodically
         trimmedHandler.post(checkPositionHandler)
     }
 
     fun pauseTrimmedVideo() {
         trimmedHandler.removeCallbacks(checkPositionHandler)
+        exoPlayer.pause()
+        currentPosition = 0
+    }
+
+    LaunchedEffect(onSeekingPosition) {
+        if (onSeekingPosition > 0 && isDraggingTrim) {
+            trimRange = LongRange(onSeekingPosition, trimRange.last)
+            exoPlayer.seekTo(onSeekingPosition)
+        }
+    }
+
+    LaunchedEffect(isDraggingTrim) {
+        if (isDraggingTrim) {
+            isPlayingPreview = false
+        }
     }
 
     LaunchedEffect(selectedVideo) {
         selectedVideo?.let {
             videoTransformationViewModel.extractThumbnailsPerSecond(it)
+        }
+    }
+
+    LaunchedEffect(isPlayingPreview) {
+        if (isPlayingPreview) {
+            val seekPosition = when {
+                kotlin.math.abs(onSeekingPosition - trimRange.first) <= 100 -> trimRange.first
+                kotlin.math.abs(onSeekingPosition - trimRange.last) <= 100 -> trimRange.first
+                else -> onSeekingPosition
+            }
+            playTrimmedVideo(currentPosition = seekPosition)
+        } else {
+            pauseTrimmedVideo()
         }
     }
 
@@ -183,18 +206,18 @@ fun VideoTransformationScreen(
                         thumbnails = thumbnails,
                         selectedVideo = selectedVideo!!,
                         isVideoPlaying = isPlayingPreview,
+                        currentPlayingPosition = currentPosition,
                         onPlayClick = {
-                            exoPlayer.playWhenReady = !exoPlayer.playWhenReady
-                            isPlayingPreview = exoPlayer.playWhenReady
-
-                            if (isPlayingPreview) {
-                                playTrimmedVideo(trimRange)
-                            } else {
-                                pauseTrimmedVideo()
-                            }
+                            isPlayingPreview = !isPlayingPreview
                         },
                         onTrimChange = { start, end ->
                             trimRange = LongRange(start, end)
+                        },
+                        onSeekChange = { position ->
+                            onSeekingPosition = position
+                        },
+                        onDragStateChange = { isDragging ->
+                            isDraggingTrim = isDragging
                         }
                     )
                 }
@@ -249,6 +272,17 @@ fun VideoTransformationScreen(
                 onBackClick = {
                     navController.popBackStack()
                 },
+                onActionClick = { action ->
+                    when (action) {
+                        TransformationAction.Music -> {
+
+                        }
+
+                        else -> {
+
+                        }
+                    }
+                },
                 modifier = Modifier
                     .width(deviceWidth * (1 - progress.floatValue))
                     .height(playerHeight * (1 - progress.floatValue))
@@ -273,14 +307,25 @@ fun VideoTransformationScreen(
 
 @UnstableApi
 @Composable
-fun rememberExoPlayer(context: Context, videoUri: Uri): ExoPlayer {
+fun rememberExoPlayer(
+    context: Context,
+    videoUri: Uri,
+    onVideoStateChanged: (Int) -> Unit,
+): ExoPlayer {
     return remember {
         ExoPlayer.Builder(context).build().apply {
-            repeatMode = ExoPlayer.REPEAT_MODE_ONE
+            repeatMode = ExoPlayer.REPEAT_MODE_OFF
             setMediaItem(MediaItem.fromUri(videoUri))
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
             prepare()
             playWhenReady = true
+
+            addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    super.onPlaybackStateChanged(playbackState)
+                    onVideoStateChanged.invoke(playbackState)
+                }
+            })
         }
     }
 }

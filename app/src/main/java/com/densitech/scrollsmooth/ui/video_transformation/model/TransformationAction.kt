@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video_transformation
+package com.densitech.scrollsmooth.ui.video_transformation.model
 
 import com.densitech.scrollsmooth.R
 

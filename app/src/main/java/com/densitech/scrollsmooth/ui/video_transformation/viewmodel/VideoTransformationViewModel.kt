@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.video_transformation
+package com.densitech.scrollsmooth.ui.video_transformation.viewmodel
 
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.densitech.scrollsmooth.ui.utils.NUMBER_OF_FRAME_ITEM
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalThumbnail
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
+import com.densitech.scrollsmooth.ui.video_transformation.model.AudioResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,16 +18,32 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
-class VideoTransformationViewModel @Inject constructor() : ViewModel() {
+class VideoTransformationViewModel @Inject constructor(
+    private val getAudiosUseCase: GetAudiosUseCase = GetAudiosUseCase(),
+) : ViewModel() {
     private val _thumbnails: MutableStateFlow<List<DTOLocalThumbnail>> =
         MutableStateFlow(emptyList())
     val thumbnails = _thumbnails.asStateFlow()
+
+    private val _audios: MutableStateFlow<List<AudioResponse>> = MutableStateFlow(emptyList())
+    val audios = _audios.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            fetchAudios()
+        }
+    }
+
+    private suspend fun fetchAudios() {
+        val audios = getAudiosUseCase.fetchAudios()
+        _audios.value = audios
+    }
 
     fun extractThumbnailsPerSecond(selectedVideo: DTOLocalVideo) {
         viewModelScope.launch(Dispatchers.IO) {
             val thumbnails = mutableListOf<DTOLocalThumbnail>()
             val videoDuration = selectedVideo.duration.toLong() / 1000
-            val stepPerSeconds = videoDuration / NUMBER_OF_FRAME_ITEM * 1.0
+            val stepPerSeconds = videoDuration / (NUMBER_OF_FRAME_ITEM * 1.0)
             val retriever = MediaMetadataRetriever()
             retriever.setDataSource(selectedVideo.videoPath)
 
@@ -54,7 +71,7 @@ class VideoTransformationViewModel @Inject constructor() : ViewModel() {
             }
 
             withContext(Dispatchers.Main) {
-                println(thumbnails.size)
+                println("SIZE ${thumbnails.size}")
                 _thumbnails.value = thumbnails
             }
         }

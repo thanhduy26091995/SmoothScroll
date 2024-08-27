@@ -1,17 +1,12 @@
 package com.densitech.scrollsmooth.ui.bottom_sheet
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
+import com.densitech.scrollsmooth.ui.utils.SMALL_FRACTION_TO_IGNORE
 import kotlin.math.abs
 
 @Composable
@@ -35,7 +30,7 @@ fun SheetExpanded(
     modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    if (currentFraction < 0) {
+    if (currentFraction < SMALL_FRACTION_TO_IGNORE) {
         return
     }
     val alpha = when {
@@ -60,7 +55,7 @@ fun SheetCollapsed(
     content: @Composable RowScope.() -> Unit,
 ) {
     // Hide view in case alpha = 0
-    if (currentFraction <= 0.01) {
+    if (currentFraction <= SMALL_FRACTION_TO_IGNORE) {
         Row(
             modifier = modifier,
             verticalAlignment = Alignment.CenterVertically

@@ -28,8 +28,8 @@ import com.densitech.scrollsmooth.ui.video.view.VideoScreen
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
 import com.densitech.scrollsmooth.ui.video_creation.view.VideoCreationScreen
 import com.densitech.scrollsmooth.ui.video_creation.viewmodel.VideoCreationViewModel
-import com.densitech.scrollsmooth.ui.video_transformation.VideoTransformationScreen
-import com.densitech.scrollsmooth.ui.video_transformation.VideoTransformationViewModel
+import com.densitech.scrollsmooth.ui.video_transformation.view.VideoTransformationScreen
+import com.densitech.scrollsmooth.ui.video_transformation.viewmodel.VideoTransformationViewModel
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 @OptIn(UnstableApi::class)
