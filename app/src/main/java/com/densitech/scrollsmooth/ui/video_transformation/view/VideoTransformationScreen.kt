@@ -4,19 +4,38 @@ package com.densitech.scrollsmooth.ui.video_transformation.view
 
 import android.content.Context
 import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,7 +57,7 @@ import com.densitech.scrollsmooth.ui.bottom_sheet.SheetContent
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetExpanded
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.format
-import com.densitech.scrollsmooth.ui.video_creation.viewmodel.VideoCreationViewModel
+import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
 import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
 import com.densitech.scrollsmooth.ui.video_transformation.viewmodel.VideoTransformationViewModel
 import kotlinx.coroutines.launch
@@ -47,34 +66,136 @@ import kotlinx.coroutines.launch
 @Composable
 fun VideoTransformationScreen(
     navController: NavController,
-    videoCreationViewModel: VideoCreationViewModel,
+    selectedVideo: DTOLocalVideo,
     videoTransformationViewModel: VideoTransformationViewModel,
 ) {
+    // Data state from viewmodel
     val thumbnails by videoTransformationViewModel.thumbnails.collectAsState()
-    val selectedVideo by videoCreationViewModel.selectedVideo.collectAsState()
+    val trimmedRangeSelected by videoTransformationViewModel.trimmedRangeSelected.collectAsState()
+    val currentPosition by videoTransformationViewModel.currentPosition.collectAsState()
+    val isPlaying by videoTransformationViewModel.isPlaying.collectAsState()
 
+    // Context
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localConfiguration = LocalConfiguration.current
+    val lifeCycleOwner = LocalLifecycleOwner.current
 
+    // Create exo instance
     val exoPlayer =
         rememberExoPlayer(
             context = context,
-            videoUri = Uri.parse(selectedVideo?.videoPath),
-            onVideoStateChanged = {})
+            videoUri = Uri.parse(selectedVideo.videoPath),
+            onVideoStateChanged = { state ->
+                if (state == Player.STATE_ENDED) {
+                    videoTransformationViewModel.pauseVideo()
+                }
+            })
 
-    val trimmedHandler = Handler(Looper.getMainLooper())
+    // Sub for padding and peek height
+    val playerHeight = localConfiguration.screenHeightDp.dp - 72.dp - 50.dp
+    val deviceWidth = localConfiguration.screenWidthDp.dp
 
-    val lifeCycleOwner = LocalLifecycleOwner.current
+    // Scaffold state to control bottom sheet
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.PartiallyExpanded,
+            skipHiddenState = true
+        )
+    )
+
+    // Offset of bottom sheet, it will had value from 0 to DEFAULT_FRACTION
+    val offsetBottomSheet by remember(scaffoldState) {
+        derivedStateOf {
+            runCatching {
+                scaffoldState.bottomSheetState.requireOffset()
+            }.getOrDefault(0f)
+        }
+    }
+    val progress = rememberSaveable { mutableFloatStateOf(0f) }
+    val sheetOffset = rememberSaveable { mutableFloatStateOf(-1f) }
+
+    // Range of trim, default will be from 0 to duration
+    var trimRange by remember {
+        if (trimmedRangeSelected.first == 0L && trimmedRangeSelected.last == 0L) {
+            mutableStateOf(0..selectedVideo.duration.toLong())
+        } else {
+            mutableStateOf(trimmedRangeSelected.first..trimmedRangeSelected.last)
+        }
+
+    }
+
+    // Is Dragging trim, center line
+    var isDraggingTrim by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    // Save exo player instance to viewmodel
+    LaunchedEffect(exoPlayer) {
+        videoTransformationViewModel.setExoPlayer(exoPlayer)
+    }
+
+    // Update trimRange from view to viewmodel
+    LaunchedEffect(trimRange) {
+        videoTransformationViewModel.updateTrimRange(first = trimRange.first, last = trimRange.last)
+    }
+
+    // Current position change (By seeking), so we will need to seek to preview thumbnail
+    LaunchedEffect(currentPosition) {
+        if (currentPosition > 0 && isDraggingTrim) {
+            videoTransformationViewModel.exoPlayer?.seekTo(currentPosition)
+        }
+    }
+
+    // Dragging will pause video
+    LaunchedEffect(isDraggingTrim) {
+        if (isDraggingTrim) {
+            videoTransformationViewModel.setIsPlaying(false)
+        }
+    }
+
+    // Update correct trim and get thumbnail from selected video
+    LaunchedEffect(selectedVideo) {
+        videoTransformationViewModel.extractThumbnailsPerSecond(selectedVideo)
+        // only call update in case both first and last is 0
+        val trimmedRange = videoTransformationViewModel.trimmedRangeSelected.value
+        if (trimmedRange.first == 0L && trimmedRange.last == 0L) {
+            videoTransformationViewModel.updateTrimRange(
+                first = 0L,
+                last = selectedVideo.duration.toLong()
+            )
+        }
+    }
+
+    // Base on this flag to start or pause video
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            videoTransformationViewModel.startVideo()
+        } else {
+            videoTransformationViewModel.pauseVideo()
+        }
+    }
+
+    // Calculate progress of bottom sheet
+    LaunchedEffect(scaffoldState.bottomSheetState) {
+        snapshotFlow { offsetBottomSheet }.collect { offset ->
+            if (sheetOffset.floatValue == -1f) {
+                sheetOffset.floatValue = offset
+            }
+            progress.floatValue = (1 - (offset / sheetOffset.floatValue)).format(4).toFloat()
+        }
+    }
+
+
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> {
-                    exoPlayer.play()
+                    videoTransformationViewModel.setIsPlaying(true)
                 }
 
                 Lifecycle.Event.ON_STOP -> {
-                    exoPlayer.stop()
+                    videoTransformationViewModel.setIsPlaying(false)
                 }
 
                 else -> {
@@ -85,110 +206,8 @@ fun VideoTransformationScreen(
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            exoPlayer.release()
+            videoTransformationViewModel.exoPlayer?.release()
             lifeCycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
-
-    // Sub for padding and peek height
-    val playerHeight = localConfiguration.screenHeightDp.dp - 72.dp - 50.dp
-    val deviceWidth = localConfiguration.screenWidthDp.dp
-
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        bottomSheetState = rememberStandardBottomSheetState(
-            initialValue = SheetValue.PartiallyExpanded,
-            skipHiddenState = true
-        )
-    )
-
-    val offsetBottomSheet by remember(scaffoldState) {
-        derivedStateOf {
-            runCatching {
-                scaffoldState.bottomSheetState.requireOffset()
-            }.getOrDefault(0f)
-        }
-    }
-
-    val progress = rememberSaveable { mutableFloatStateOf(0f) }
-    val sheetOffset = rememberSaveable { mutableFloatStateOf(-1f) }
-    var trimRange by remember {
-        mutableStateOf(0L..selectedVideo!!.duration.toLong())
-    }
-    var isPlayingPreview by rememberSaveable {
-        mutableStateOf(true)
-    }
-    var isDraggingTrim by rememberSaveable {
-        mutableStateOf(false)
-    }
-    var currentPosition by rememberSaveable {
-        mutableLongStateOf(0L)
-    }
-    var onSeekingPosition by rememberSaveable {
-        mutableLongStateOf(0L)
-    }
-
-    val checkPositionHandler = object : Runnable {
-        override fun run() {
-            currentPosition = exoPlayer.currentPosition.coerceIn(trimRange.first, trimRange.last)
-            if (currentPosition >= trimRange.last) {
-                isPlayingPreview = false
-            } else {
-                trimmedHandler.postDelayed(this, 1000)
-            }
-        }
-    }
-
-    fun playTrimmedVideo(currentPosition: Long) {
-        exoPlayer.seekTo(currentPosition)
-        exoPlayer.play()
-        // Use a Handler to check the player's position periodically
-        trimmedHandler.post(checkPositionHandler)
-    }
-
-    fun pauseTrimmedVideo() {
-        trimmedHandler.removeCallbacks(checkPositionHandler)
-        exoPlayer.pause()
-        currentPosition = 0
-    }
-
-    LaunchedEffect(onSeekingPosition) {
-        if (onSeekingPosition > 0 && isDraggingTrim) {
-            trimRange = LongRange(onSeekingPosition, trimRange.last)
-            exoPlayer.seekTo(onSeekingPosition)
-        }
-    }
-
-    LaunchedEffect(isDraggingTrim) {
-        if (isDraggingTrim) {
-            isPlayingPreview = false
-        }
-    }
-
-    LaunchedEffect(selectedVideo) {
-        selectedVideo?.let {
-            videoTransformationViewModel.extractThumbnailsPerSecond(it)
-        }
-    }
-
-    LaunchedEffect(isPlayingPreview) {
-        if (isPlayingPreview) {
-            val seekPosition = when {
-                kotlin.math.abs(onSeekingPosition - trimRange.first) <= 100 -> trimRange.first
-                kotlin.math.abs(onSeekingPosition - trimRange.last) <= 100 -> trimRange.first
-                else -> onSeekingPosition
-            }
-            playTrimmedVideo(currentPosition = seekPosition)
-        } else {
-            pauseTrimmedVideo()
-        }
-    }
-
-    LaunchedEffect(scaffoldState.bottomSheetState) {
-        snapshotFlow { offsetBottomSheet }.collect { offset ->
-            if (sheetOffset.floatValue == -1f) {
-                sheetOffset.floatValue = offset
-            }
-            progress.floatValue = (1 - (offset / sheetOffset.floatValue)).format(4).toFloat()
         }
     }
 
@@ -204,17 +223,19 @@ fun VideoTransformationScreen(
                 ) {
                     SheetExpandedContentView(
                         thumbnails = thumbnails,
-                        selectedVideo = selectedVideo!!,
-                        isVideoPlaying = isPlayingPreview,
+                        selectedVideo = selectedVideo,
+                        isVideoPlaying = isPlaying,
+                        startPosition = trimRange.first,
                         currentPlayingPosition = currentPosition,
+                        endPosition = trimRange.last,
                         onPlayClick = {
-                            isPlayingPreview = !isPlayingPreview
+                            videoTransformationViewModel.setIsPlaying(!isPlaying)
                         },
                         onTrimChange = { start, end ->
                             trimRange = LongRange(start, end)
                         },
                         onSeekChange = { position ->
-                            onSeekingPosition = position
+                            videoTransformationViewModel.updateCurrentPosition(position)
                         },
                         onDragStateChange = { isDragging ->
                             isDraggingTrim = isDragging

@@ -3,8 +3,11 @@ package com.densitech.scrollsmooth.ui.video_transformation.viewmodel
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.exoplayer.ExoPlayer
 import com.densitech.scrollsmooth.ui.utils.NUMBER_OF_FRAME_ITEM
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalThumbnail
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
@@ -25,8 +28,26 @@ class VideoTransformationViewModel @Inject constructor(
         MutableStateFlow(emptyList())
     val thumbnails = _thumbnails.asStateFlow()
 
+    private val _trimRange: MutableStateFlow<LongRange> = MutableStateFlow(0L..0L)
+    val trimmedRangeSelected = _trimRange.asStateFlow()
+
     private val _audios: MutableStateFlow<List<AudioResponse>> = MutableStateFlow(emptyList())
     val audios = _audios.asStateFlow()
+
+    private val _currentPosition: MutableStateFlow<Long> = MutableStateFlow(0L)
+    val currentPosition = _currentPosition.asStateFlow()
+
+    // For preview
+    val trimmedHandler = Handler(Looper.getMainLooper())
+
+    private val _isPlaying: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isPlaying = _isPlaying.asStateFlow()
+
+    // ExoPlayer instance pass from view (Be careful with the lifecycle)
+    private var _exoPlayer: ExoPlayer? = null
+    val exoPlayer: ExoPlayer?
+        get() = _exoPlayer
+
 
     init {
         viewModelScope.launch {
@@ -34,9 +55,56 @@ class VideoTransformationViewModel @Inject constructor(
         }
     }
 
-    private suspend fun fetchAudios() {
-        val audios = getAudiosUseCase.fetchAudios()
-        _audios.value = audios
+    fun setIsPlaying(isPlaying: Boolean) {
+        _isPlaying.value = isPlaying
+    }
+
+    fun setExoPlayer(player: ExoPlayer) {
+        _exoPlayer = player
+    }
+
+    private val checkPositionHandler = object : Runnable {
+        override fun run() {
+            val newPlayingPosition = _exoPlayer?.currentPosition ?: return
+            if (newPlayingPosition >= _trimRange.value.last) {
+                // Reach end of trimmed, we will pause the video, then seek to first
+                _currentPosition.value = _trimRange.value.first
+                pauseVideo()
+                setIsPlaying(false)
+            } else {
+                _currentPosition.value = newPlayingPosition
+                trimmedHandler.postDelayed(this, 1000)
+            }
+        }
+    }
+
+    fun pauseVideo() {
+        // Pause a handler
+        trimmedHandler.removeCallbacks(checkPositionHandler)
+        _exoPlayer?.pause()
+    }
+
+    fun startVideo() {
+        val seekPosition = when {
+            _currentPosition.value >= _trimRange.value.last -> _trimRange.value.first
+            _currentPosition.value <= _trimRange.value.first -> _trimRange.value.first
+            else -> _currentPosition.value
+        }
+
+        _currentPosition.value = seekPosition
+        // Register handler to loop every seconds
+        trimmedHandler.post(checkPositionHandler)
+        // Playing
+        _exoPlayer?.seekTo(seekPosition)
+        _exoPlayer?.play()
+    }
+
+    fun updateCurrentPosition(position: Long) {
+        _currentPosition.value = position
+    }
+
+    fun updateTrimRange(first: Long, last: Long) {
+        _trimRange.value = first..last
     }
 
     fun extractThumbnailsPerSecond(selectedVideo: DTOLocalVideo) {
@@ -75,5 +143,15 @@ class VideoTransformationViewModel @Inject constructor(
                 _thumbnails.value = thumbnails
             }
         }
+    }
+
+    private suspend fun fetchAudios() {
+        val audios = getAudiosUseCase.fetchAudios()
+        _audios.value = audios
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        exoPlayer?.release()
     }
 }

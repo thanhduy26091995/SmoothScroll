@@ -3,6 +3,8 @@ package com.densitech.scrollsmooth.ui.video_creation.viewmodel
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

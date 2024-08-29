@@ -5,9 +5,19 @@ package com.densitech.scrollsmooth.ui.main
 import android.os.Build
 import androidx.annotation.OptIn
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -148,9 +158,11 @@ fun MainScreen(
             }
 
             composable(Screen.VideoTransformation.route) {
+                val selectedVideo = videoCreationViewModel.selectedVideo.value
+                    ?: throw Exception("You haven't selected any video")
                 VideoTransformationScreen(
                     navController = navController,
-                    videoCreationViewModel = videoCreationViewModel,
+                    selectedVideo = selectedVideo,
                     videoTransformationViewModel = videoTransformationViewModel,
                 )
             }
