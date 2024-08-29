@@ -206,6 +206,7 @@ fun VideoTransformationScreen(
 
         lifeCycleOwner.lifecycle.addObserver(observer)
         onDispose {
+            videoTransformationViewModel.releaseData()
             videoTransformationViewModel.exoPlayer?.release()
             lifeCycleOwner.lifecycle.removeObserver(observer)
         }
@@ -296,7 +297,7 @@ fun VideoTransformationScreen(
                 onActionClick = { action ->
                     when (action) {
                         TransformationAction.Music -> {
-
+                            // Open bottom sheet to select audio
                         }
 
                         else -> {

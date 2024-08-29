@@ -20,12 +20,10 @@ import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAc
 
 @Composable
 fun TransformationActionView(
+    actions: List<TransformationAction>,
     onActionClick: (TransformationAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val actions =
-        listOf(TransformationAction.Music, TransformationAction.Text, TransformationAction.Sticker)
-
     Row(modifier = modifier) {
         actions.forEach {
             TransformationActionItemView(action = it, onIconClick = onActionClick)

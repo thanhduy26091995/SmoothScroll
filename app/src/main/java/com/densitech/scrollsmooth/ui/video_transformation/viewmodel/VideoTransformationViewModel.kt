@@ -55,27 +55,20 @@ class VideoTransformationViewModel @Inject constructor(
         }
     }
 
+    fun releaseData() {
+        _exoPlayer = null
+        _isPlaying.value = false
+        _currentPosition.value = 0
+        _trimRange.value = LongRange.EMPTY
+        _thumbnails.value = emptyList()
+    }
+
     fun setIsPlaying(isPlaying: Boolean) {
         _isPlaying.value = isPlaying
     }
 
     fun setExoPlayer(player: ExoPlayer) {
         _exoPlayer = player
-    }
-
-    private val checkPositionHandler = object : Runnable {
-        override fun run() {
-            val newPlayingPosition = _exoPlayer?.currentPosition ?: return
-            if (newPlayingPosition >= _trimRange.value.last) {
-                // Reach end of trimmed, we will pause the video, then seek to first
-                _currentPosition.value = _trimRange.value.first
-                pauseVideo()
-                setIsPlaying(false)
-            } else {
-                _currentPosition.value = newPlayingPosition
-                trimmedHandler.postDelayed(this, 1000)
-            }
-        }
     }
 
     fun pauseVideo() {
@@ -141,6 +134,21 @@ class VideoTransformationViewModel @Inject constructor(
             withContext(Dispatchers.Main) {
                 println("SIZE ${thumbnails.size}")
                 _thumbnails.value = thumbnails
+            }
+        }
+    }
+
+    private val checkPositionHandler = object : Runnable {
+        override fun run() {
+            val newPlayingPosition = _exoPlayer?.currentPosition ?: return
+            if (newPlayingPosition >= _trimRange.value.last) {
+                // Reach end of trimmed, we will pause the video, then seek to first
+                _currentPosition.value = _trimRange.value.first
+                pauseVideo()
+                setIsPlaying(false)
+            } else {
+                _currentPosition.value = newPlayingPosition
+                trimmedHandler.postDelayed(this, 1000)
             }
         }
     }
