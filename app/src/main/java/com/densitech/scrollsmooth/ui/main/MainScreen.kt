@@ -34,6 +34,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.densitech.scrollsmooth.ui.audio.AudioSelectionViewModel
 import com.densitech.scrollsmooth.ui.video.view.VideoScreen
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
 import com.densitech.scrollsmooth.ui.video_creation.view.VideoCreationScreen
@@ -49,6 +50,7 @@ fun MainScreen(
     videoScreenViewModel: VideoScreenViewModel = hiltViewModel(),
     videoCreationViewModel: VideoCreationViewModel = hiltViewModel(),
     videoTransformationViewModel: VideoTransformationViewModel = hiltViewModel(),
+    audioSelectionViewModel: AudioSelectionViewModel = hiltViewModel(),
 ) {
     val tabTitles = listOf(Screen.Home, Screen.Search, Screen.Add, Screen.Profile)
 
@@ -164,6 +166,7 @@ fun MainScreen(
                     navController = navController,
                     selectedVideo = selectedVideo,
                     videoTransformationViewModel = videoTransformationViewModel,
+                    audioSelectionViewModel = audioSelectionViewModel
                 )
             }
         }

@@ -4,6 +4,7 @@ package com.densitech.scrollsmooth.ui.video_transformation.view
 
 import android.content.Context
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,6 +53,8 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
+import com.densitech.scrollsmooth.ui.audio.AudioSelectionBottomSheet
+import com.densitech.scrollsmooth.ui.audio.AudioSelectionViewModel
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetCollapsed
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetContent
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetExpanded
@@ -68,6 +71,7 @@ fun VideoTransformationScreen(
     navController: NavController,
     selectedVideo: DTOLocalVideo,
     videoTransformationViewModel: VideoTransformationViewModel,
+    audioSelectionViewModel: AudioSelectionViewModel,
 ) {
     // Data state from viewmodel
     val thumbnails by videoTransformationViewModel.thumbnails.collectAsState()
@@ -88,7 +92,7 @@ fun VideoTransformationScreen(
             videoUri = Uri.parse(selectedVideo.videoPath),
             onVideoStateChanged = { state ->
                 if (state == Player.STATE_ENDED) {
-                    videoTransformationViewModel.pauseVideo()
+                    videoTransformationViewModel.onVideoEnded()
                 }
             })
 
@@ -127,6 +131,11 @@ fun VideoTransformationScreen(
 
     // Is Dragging trim, center line
     var isDraggingTrim by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    // Flag to control bottom sheet audio
+    var isShowAudioBottomSheet by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -170,7 +179,7 @@ fun VideoTransformationScreen(
     // Base on this flag to start or pause video
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
-            videoTransformationViewModel.startVideo()
+            videoTransformationViewModel.playVideo()
         } else {
             videoTransformationViewModel.pauseVideo()
         }
@@ -191,7 +200,10 @@ fun VideoTransformationScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> {
-                    videoTransformationViewModel.setIsPlaying(true)
+                    // Only play in case not show audio bottom sheet
+                    if (!isShowAudioBottomSheet) {
+                        videoTransformationViewModel.setIsPlaying(true)
+                    }
                 }
 
                 Lifecycle.Event.ON_STOP -> {
@@ -210,6 +222,10 @@ fun VideoTransformationScreen(
             videoTransformationViewModel.exoPlayer?.release()
             lifeCycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+
+    BackHandler {
+        navController.popBackStack()
     }
 
     BottomSheetScaffold(
@@ -298,6 +314,9 @@ fun VideoTransformationScreen(
                     when (action) {
                         TransformationAction.Music -> {
                             // Open bottom sheet to select audio
+                            isShowAudioBottomSheet = true
+                            // Pause playing video
+                            videoTransformationViewModel.pauseVideo()
                         }
 
                         else -> {
@@ -325,11 +344,27 @@ fun VideoTransformationScreen(
             )
         }
     }
+
+    // Bottom sheet audio
+    if (isShowAudioBottomSheet) {
+        AudioSelectionBottomSheet(
+            audioSelectionViewModel = audioSelectionViewModel,
+            onSelectedAudio = { selectedAudio ->
+                audioSelectionViewModel.onSelectAudio(selectedAudio)
+                isShowAudioBottomSheet = false
+            },
+            onDismissBottomSheet = {
+                isShowAudioBottomSheet = false
+                // Playing video
+                videoTransformationViewModel.playVideo()
+            }
+        )
+    }
 }
 
 @UnstableApi
 @Composable
-fun rememberExoPlayer(
+private fun rememberExoPlayer(
     context: Context,
     videoUri: Uri,
     onVideoStateChanged: (Int) -> Unit,

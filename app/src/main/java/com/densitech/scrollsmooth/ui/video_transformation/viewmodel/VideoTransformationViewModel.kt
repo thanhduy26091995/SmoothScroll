@@ -11,7 +11,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.densitech.scrollsmooth.ui.utils.NUMBER_OF_FRAME_ITEM
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalThumbnail
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
-import com.densitech.scrollsmooth.ui.video_transformation.model.AudioResponse
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +21,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoTransformationViewModel @Inject constructor(
-    private val getAudiosUseCase: GetAudiosUseCase = GetAudiosUseCase(),
+
 ) : ViewModel() {
     private val _thumbnails: MutableStateFlow<List<DTOLocalThumbnail>> =
         MutableStateFlow(emptyList())
@@ -30,9 +29,6 @@ class VideoTransformationViewModel @Inject constructor(
 
     private val _trimRange: MutableStateFlow<LongRange> = MutableStateFlow(0L..0L)
     val trimmedRangeSelected = _trimRange.asStateFlow()
-
-    private val _audios: MutableStateFlow<List<AudioResponse>> = MutableStateFlow(emptyList())
-    val audios = _audios.asStateFlow()
 
     private val _currentPosition: MutableStateFlow<Long> = MutableStateFlow(0L)
     val currentPosition = _currentPosition.asStateFlow()
@@ -49,17 +45,11 @@ class VideoTransformationViewModel @Inject constructor(
         get() = _exoPlayer
 
 
-    init {
-        viewModelScope.launch {
-            fetchAudios()
-        }
-    }
-
     fun releaseData() {
         _exoPlayer = null
         _isPlaying.value = false
         _currentPosition.value = 0
-        _trimRange.value = LongRange.EMPTY
+        _trimRange.value = LongRange(0, 0)
         _thumbnails.value = emptyList()
     }
 
@@ -71,13 +61,19 @@ class VideoTransformationViewModel @Inject constructor(
         _exoPlayer = player
     }
 
+    fun onVideoEnded() {
+        pauseVideo()
+        setIsPlaying(false)
+        _currentPosition.value = _trimRange.value.first
+    }
+
     fun pauseVideo() {
         // Pause a handler
         trimmedHandler.removeCallbacks(checkPositionHandler)
         _exoPlayer?.pause()
     }
 
-    fun startVideo() {
+    fun playVideo() {
         val seekPosition = when {
             _currentPosition.value >= _trimRange.value.last -> _trimRange.value.first
             _currentPosition.value <= _trimRange.value.first -> _trimRange.value.first
@@ -151,11 +147,6 @@ class VideoTransformationViewModel @Inject constructor(
                 trimmedHandler.postDelayed(this, 1000)
             }
         }
-    }
-
-    private suspend fun fetchAudios() {
-        val audios = getAudiosUseCase.fetchAudios()
-        _audios.value = audios
     }
 
     override fun onCleared() {
