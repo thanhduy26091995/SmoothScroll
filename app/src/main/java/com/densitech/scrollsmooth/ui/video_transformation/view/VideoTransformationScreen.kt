@@ -58,6 +58,7 @@ import com.densitech.scrollsmooth.ui.audio.AudioSelectionViewModel
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetCollapsed
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetContent
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetExpanded
+import com.densitech.scrollsmooth.ui.text.TextOverlayPreview
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.format
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
@@ -136,6 +137,11 @@ fun VideoTransformationScreen(
 
     // Flag to control bottom sheet audio
     var isShowAudioBottomSheet by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    // Flag to control text overlay
+    var isShowTextingOverlay by rememberSaveable {
         mutableStateOf(false)
     }
 
@@ -319,6 +325,10 @@ fun VideoTransformationScreen(
                             videoTransformationViewModel.pauseVideo()
                         }
 
+                        TransformationAction.Text -> {
+                            isShowTextingOverlay = true
+                        }
+
                         else -> {
 
                         }
@@ -359,6 +369,12 @@ fun VideoTransformationScreen(
                 videoTransformationViewModel.playVideo()
             }
         )
+    }
+
+    if (isShowTextingOverlay) {
+        TextOverlayPreview(onDoneClick = {
+            isShowTextingOverlay = false
+        })
     }
 }
 

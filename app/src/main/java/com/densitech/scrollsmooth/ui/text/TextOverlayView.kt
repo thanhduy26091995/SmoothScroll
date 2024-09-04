@@ -7,6 +7,8 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,8 +21,14 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -47,8 +55,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,8 +66,7 @@ import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 import kotlin.math.roundToInt
 
 @Composable
-@Preview
-fun TextOverlayPreview() {
+fun TextOverlayPreview(onDoneClick: () -> Unit) {
     val localDensity = LocalDensity.current
     val localConfiguration = LocalConfiguration.current
     val focusRequester = remember {
@@ -74,7 +83,7 @@ fun TextOverlayPreview() {
     )
 
     var isEditingTextMode by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
 
     var selectedFont by remember {
@@ -102,6 +111,10 @@ fun TextOverlayPreview() {
 
     var rotationAngle by remember {
         mutableFloatStateOf(0f)
+    }
+
+    var isShowDropdownSelection by remember {
+        mutableStateOf(false)
     }
 
     LaunchedEffect(isEditingTextMode) {
@@ -133,23 +146,31 @@ fun TextOverlayPreview() {
         )
     }
 
+//    Scaffold(modifier = Modifier
+//        .fillMaxSize()
+//        .background(Color.Red)) { paddingValues ->
+//
+//    }
+
     Box(
         modifier = Modifier
+            .padding(paddingValues = PaddingValues(vertical = 20.dp))
             .fillMaxSize() // Occupy full screen, allowing unrestricted drag
             .background(Color.Transparent)
             .pointerInput(Unit) {
-                if (!isEditingTextMode) {
-                    detectTransformGestures { _, pan, zoom, rotation ->
+                detectTransformGestures { _, pan, zoom, rotation ->
+                    if (!isEditingTextMode) {
                         scale *= zoom  // Update scale with zoom factor
                         scale = scale.coerceIn(0.5f, 5f)
                         rotationAngle += rotation
                         textOffset += pan
                     }
                 }
-
-                if (isEditingTextMode) {
-                    detectTapGestures {
-                        // Handle tap gestures here
+            }
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    // Handle tap gestures here
+                    if (isEditingTextMode) {
                         isEditingTextMode = false
                     }
                 }
@@ -162,7 +183,8 @@ fun TextOverlayPreview() {
                 label = {},
                 modifier = Modifier
                     .focusRequester(focusRequester)
-                    .align(Alignment.Center),
+                    .align(Alignment.Center)
+                    .padding(bottom = 50.dp),
                 colors = TextFieldDefaults.colors().copy(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -176,7 +198,7 @@ fun TextOverlayPreview() {
                     fontSize = with(LocalDensity.current) { (fontSize * scale).toSp() },
                     color = textColor,
                     fontFamily = stringToFont(selectedFont)
-                )
+                ),
             )
         } else {
             // Draggable and Zoomable T   ext Overlay
@@ -196,7 +218,36 @@ fun TextOverlayPreview() {
                     text = text,
                     fontSize = with(LocalDensity.current) { (fontSize * scale).toSp() },
                     color = textColor,
-                    fontFamily = stringToFont(selectedFont)
+                    fontFamily = stringToFont(selectedFont),
+                    modifier = Modifier.clickableNoRipple {
+                        isShowDropdownSelection = true
+                    }
+                )
+
+                DropdownSelection(
+                    isShowDropdownSelection = isShowDropdownSelection,
+                    onEditClick = {
+                        isEditingTextMode = true
+                        isShowDropdownSelection = false
+                    },
+                    onDismissRequest = {
+                        isShowDropdownSelection = false
+                    })
+            }
+
+            TextButton(
+                onClick = {
+                    onDoneClick.invoke()
+                },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Text(
+                    text = "Done",
+                    color = Color.White,
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
                 )
             }
 
@@ -251,7 +302,7 @@ fun TextOverlayPreview() {
                     onFontSelected = {
                         selectedFont = it
                     },
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier.padding(top = 24.dp)
                 )
             }
         }
@@ -265,6 +316,36 @@ private fun stringToFont(fontName: String): FontFamily {
         FontFamily.Cursive.name -> FontFamily.Cursive
         FontFamily.SansSerif.name -> FontFamily.SansSerif
         else -> FontFamily.Default
+    }
+}
+
+@Composable
+private fun DropdownSelection(
+    isShowDropdownSelection: Boolean,
+    onEditClick: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = isShowDropdownSelection,
+        onDismissRequest = onDismissRequest,
+        offset = DpOffset(x = 0.dp, y = 10.dp),
+        modifier = Modifier
+            .background(Color.Transparent.copy(alpha = 0.6f))
+    ) {
+        DropdownMenuItem(
+            text = {
+                Row {
+                    Icon(
+                        imageVector = Icons.Default.Create,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+
+                    Text("Edit", modifier = Modifier.padding(start = 10.dp), color = Color.White)
+                }
+            },
+            onClick = { onEditClick.invoke() }
+        )
     }
 }
 
