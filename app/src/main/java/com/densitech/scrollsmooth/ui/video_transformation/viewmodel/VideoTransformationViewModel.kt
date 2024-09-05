@@ -5,9 +5,11 @@ import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.exoplayer.ExoPlayer
+import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
 import com.densitech.scrollsmooth.ui.utils.NUMBER_OF_FRAME_ITEM
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalThumbnail
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
@@ -38,6 +40,10 @@ class VideoTransformationViewModel @Inject constructor(
 
     private val _isPlaying: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPlaying = _isPlaying.asStateFlow()
+
+    private val _textOverlayList: MutableStateFlow<List<TextOverlayParams>> =
+        MutableStateFlow(emptyList())
+    val textOverlayList = _textOverlayList.asStateFlow()
 
     // ExoPlayer instance pass from view (Be careful with the lifecycle)
     private var _exoPlayer: ExoPlayer? = null
@@ -132,6 +138,35 @@ class VideoTransformationViewModel @Inject constructor(
                 _thumbnails.value = thumbnails
             }
         }
+    }
+
+    fun addNewTextOverlay(params: TextOverlayParams) {
+        val currentList = _textOverlayList.value.toMutableList()
+        currentList.add(params)
+        _textOverlayList.value = currentList
+    }
+
+    fun removeTextOverlayById(key: String) {
+        val currentList = _textOverlayList.value.toMutableList()
+        currentList.removeAll { it.key == key }
+        _textOverlayList.value = currentList
+    }
+
+    fun onTransformGestureChanged(key: String, pan: Offset, zoom: Float, rotation: Float) {
+        val selectedOverlay = _textOverlayList.value.find { it.key == key } ?: return
+        val currentZoom = (selectedOverlay.scale * zoom).coerceIn(0.5f, 5f)
+        val currentOffset = Offset(selectedOverlay.textX, selectedOverlay.textY) + pan
+        val currentRotation = selectedOverlay.rotationAngle + rotation
+        // Update overlay
+        val newOverlay = selectedOverlay.copy(
+            scale = currentZoom,
+            textX = currentOffset.x,
+            textY = currentOffset.y,
+            rotationAngle = currentRotation
+        )
+        val currentList = _textOverlayList.value.toMutableList()
+        currentList[currentList.indexOf(selectedOverlay)] = newOverlay
+        _textOverlayList.value = currentList
     }
 
     private val checkPositionHandler = object : Runnable {

@@ -79,6 +79,7 @@ fun VideoTransformationScreen(
     val trimmedRangeSelected by videoTransformationViewModel.trimmedRangeSelected.collectAsState()
     val currentPosition by videoTransformationViewModel.currentPosition.collectAsState()
     val isPlaying by videoTransformationViewModel.isPlaying.collectAsState()
+    val textOverlayList by videoTransformationViewModel.textOverlayList.collectAsState()
 
     // Context
     val scope = rememberCoroutineScope()
@@ -314,8 +315,12 @@ fun VideoTransformationScreen(
                 exoPlayer = exoPlayer,
                 currentFraction = progress.floatValue,
                 isShowingTextOverlay = isShowTextingOverlay,
+                textOverlayList = textOverlayList,
                 onBackClick = {
                     navController.popBackStack()
+                },
+                onTransformGestureChanged = { key, pan, zoom, rotation ->
+                    videoTransformationViewModel.onTransformGestureChanged(key, pan, zoom, rotation)
                 },
                 onActionClick = { action ->
                     when (action) {
@@ -359,6 +364,7 @@ fun VideoTransformationScreen(
             TextOverlayView(
                 onDoneClick = { textOverlayParams ->
                     isShowTextingOverlay = false
+                    videoTransformationViewModel.addNewTextOverlay(textOverlayParams)
                 }, modifier = Modifier
                     .padding(top = 50.dp)
                     .fillMaxSize()

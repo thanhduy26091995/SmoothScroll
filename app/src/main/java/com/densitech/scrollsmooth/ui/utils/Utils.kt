@@ -13,3 +13,4 @@ fun formatTime(timeInMilliSeconds: Long, timeFormat: String = "%02d:%02d"): Stri
     val seconds = timeInSeconds % 60
     return String.format(Locale.getDefault(), timeFormat, minutes, seconds)
 }
+

@@ -1,7 +1,6 @@
 package com.densitech.scrollsmooth.ui.text.model
 
 import androidx.compose.ui.graphics.Color
-import com.densitech.scrollsmooth.ui.text.view.TextAlignmentEnum
 import java.util.UUID
 
 data class TextOverlayParams(
@@ -10,5 +9,8 @@ data class TextOverlayParams(
     val fontSize: Float,
     val textColor: Color,
     val font: String,
-    val textAlignment: TextAlignmentEnum,
+    val textX: Float,
+    val textY: Float,
+    val scale: Float,
+    val rotationAngle: Float
 )

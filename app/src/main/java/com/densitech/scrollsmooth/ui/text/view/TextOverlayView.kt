@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
+import com.densitech.scrollsmooth.ui.utils.keyboardAsState
 import kotlin.math.roundToInt
 
 @Composable
@@ -104,8 +105,19 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
             textColor = textColor,
             fontSize = fontSize,
             font = selectedFont,
-            textAlignment = textAlignmentEnum
+            textX = textOffset.x,
+            textY = textOffset.y,
+            scale = 1f,
+            rotationAngle = 0f
         )
+    }
+
+    val isKeyboardOpen by keyboardAsState() // true or false
+    LaunchedEffect(isKeyboardOpen) {
+        if (!isKeyboardOpen && text.isNotEmpty()) {
+            onDoneClick(buildResultParams())
+            return@LaunchedEffect
+        }
     }
 
     LaunchedEffect(true) {
@@ -157,7 +169,7 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
             .pointerInput(Unit) {
                 detectTapGestures {
                     // Send the tap event to the parent
-                    onDoneClick.invoke(buildResultParams())
+                    keyboardController?.hide()
                 }
             }
     ) {
@@ -313,4 +325,3 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
 private fun TextOverlayPreview() {
     TextOverlayView(onDoneClick = {})
 }
-
