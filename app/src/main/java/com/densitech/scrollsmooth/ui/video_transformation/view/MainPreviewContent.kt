@@ -1,6 +1,5 @@
 package com.densitech.scrollsmooth.ui.video_transformation.view
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +26,7 @@ import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAc
 fun MainPreviewContent(
     exoPlayer: ExoPlayer,
     currentFraction: Float,
+    isShowingTextOverlay: Boolean,
     onBackClick: () -> Unit,
     onActionClick: (TransformationAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -45,10 +45,7 @@ fun MainPreviewContent(
                 .fillMaxSize()
         )
 
-        AnimatedVisibility(visible = currentFraction == 0f) {
-
-        }
-        if (currentFraction == 0f) {
+        if (currentFraction == 0f && !isShowingTextOverlay) {
             IconButton(
                 onClick = {
                     onBackClick.invoke()
