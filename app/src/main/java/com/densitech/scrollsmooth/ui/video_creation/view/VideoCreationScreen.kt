@@ -1,6 +1,5 @@
 package com.densitech.scrollsmooth.ui.video_creation.view
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -13,7 +12,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,11 +68,11 @@ fun VideoCreationScreen(navController: NavController, viewModel: VideoCreationVi
                             .padding(vertical = 10.dp)
                             .fillMaxWidth()
                             .height(previewHeight)
-                            .background(Color.Black)
                     ) {
                         selectedVideo?.let {
                             VideoSelectedView(
-                                data = it
+                                data = it,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }

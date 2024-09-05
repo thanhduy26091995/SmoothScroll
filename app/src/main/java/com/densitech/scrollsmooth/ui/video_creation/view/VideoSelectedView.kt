@@ -3,29 +3,22 @@ package com.densitech.scrollsmooth.ui.video_creation.view
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.densitech.scrollsmooth.R
@@ -41,30 +34,36 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
         mutableStateOf(false)
     }
 
-    val ratio = remember {
-        data.width / data.height.toFloat()
+    var currentPlaybackState by remember {
+        mutableIntStateOf(Player.STATE_BUFFERING)
     }
+
+    val ratio = data.width / data.height.toFloat()
     val context = LocalContext.current
     val exoPlayer = remember {
-        ExoPlayer.Builder(context)
-            .build().apply {
-                repeatMode = ExoPlayer.REPEAT_MODE_ONE
-                setMediaItem(MediaItem.fromUri(Uri.parse(data.videoPath)))
-                videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-                prepare()
-                playWhenReady = true
-            }
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(Uri.parse(data.videoPath)))
+            playWhenReady = !isPaused
+
+            addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    super.onPlaybackStateChanged(playbackState)
+                    println(playbackState)
+                    currentPlaybackState = playbackState
+                }
+            })
+        }
     }
 
     LaunchedEffect(data) {
         // Release exo player
         exoPlayer.apply {
             setMediaItem(MediaItem.fromUri(Uri.parse(data.videoPath)))
+            prepare()
         }
     }
 
     val lifeCycleOwner = LocalLifecycleOwner.current
-
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
@@ -90,15 +89,16 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
         }
     }
 
-    val validRatio = if (ratio.isNaN() || ratio <= 0) 1f else ratio
-    val aspectRatioModifier = Modifier.aspectRatio(validRatio)
+    val validRatio = if (ratio.isNaN() || ratio <= 0 || ratio > 1f) 1f else ratio
 
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(modifier = modifier) {
         PlayerSurface(
             player = exoPlayer,
             surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-            modifier = aspectRatioModifier
+            modifier = Modifier
                 .align(Alignment.Center)
+                .fillMaxHeight()
+                .aspectRatio(validRatio)
                 .clickableNoRipple {
                     exoPlayer.run {
                         playWhenReady = !playWhenReady
@@ -106,6 +106,14 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
                     }
                 },
         )
+
+        if (currentPlaybackState != Player.STATE_READY) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            )
+        }
 
         AnimatedVisibility(
             visible = isPaused,
@@ -117,7 +125,7 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .size(96.dp)
                     .align(Alignment.Center)
-                    .alpha(0.2f),
+                    .alpha(0.2f)
             )
         }
     }
