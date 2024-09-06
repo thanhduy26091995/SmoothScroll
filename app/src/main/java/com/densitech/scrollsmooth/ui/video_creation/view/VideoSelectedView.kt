@@ -48,7 +48,6 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
             addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     super.onPlaybackStateChanged(playbackState)
-                    println(playbackState)
                     currentPlaybackState = playbackState
                 }
             })

@@ -9,8 +9,8 @@ data class TextOverlayParams(
     val fontSize: Float,
     val textColor: Color,
     val font: String,
-    val textX: Float,
-    val textY: Float,
-    val scale: Float,
-    val rotationAngle: Float
+    var textX: Float,
+    var textY: Float,
+    var scale: Float,
+    var rotationAngle: Float
 )

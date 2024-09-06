@@ -340,6 +340,9 @@ fun VideoTransformationScreen(
                         }
                     }
                 },
+                onTextOverlayDeleted = { key ->
+                    videoTransformationViewModel.removeTextOverlayById(key)
+                },
                 modifier = Modifier
                     .width(deviceWidth * (1 - progress.floatValue))
                     .height(playerHeight * (1 - progress.floatValue))

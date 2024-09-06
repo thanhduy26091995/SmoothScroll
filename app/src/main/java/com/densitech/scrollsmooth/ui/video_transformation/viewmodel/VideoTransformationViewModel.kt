@@ -134,7 +134,6 @@ class VideoTransformationViewModel @Inject constructor(
             }
 
             withContext(Dispatchers.Main) {
-                println("SIZE ${thumbnails.size}")
                 _thumbnails.value = thumbnails
             }
         }
