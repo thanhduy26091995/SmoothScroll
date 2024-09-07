@@ -153,15 +153,15 @@ class VideoTransformationViewModel @Inject constructor(
 
     fun onTransformGestureChanged(key: String, pan: Offset, zoom: Float, rotation: Float) {
         val selectedOverlay = _textOverlayList.value.find { it.key == key } ?: return
-        val currentZoom = (selectedOverlay.scale * zoom).coerceIn(0.5f, 5f)
+        val currentZoom = (zoom).coerceIn(0.5f, 5f)
         val currentOffset = Offset(selectedOverlay.textX, selectedOverlay.textY) + pan
         val currentRotation = selectedOverlay.rotationAngle + rotation
         // Update overlay
         val newOverlay = selectedOverlay.copy(
             scale = currentZoom,
-            textX = currentOffset.x,
-            textY = currentOffset.y,
-            rotationAngle = currentRotation
+            textX = pan.x,
+            textY = pan.y,
+            rotationAngle = rotation
         )
         val currentList = _textOverlayList.value.toMutableList()
         currentList[currentList.indexOf(selectedOverlay)] = newOverlay

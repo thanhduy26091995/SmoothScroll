@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,6 +43,22 @@ fun DraggableTextOverlay(
     var currentTargetBounds by remember {
         mutableStateOf(targetBounds)
     }
+    var currentTextX by remember {
+        mutableFloatStateOf(overlay.textX)
+    }
+    var currentTextY by remember {
+        mutableFloatStateOf(overlay.textY)
+    }
+    var currentScale by remember {
+        mutableFloatStateOf(overlay.scale)
+    }
+    var currentRotation by remember {
+        mutableFloatStateOf(overlay.rotationAngle)
+    }
+    var currentAdjustPan by remember {
+        mutableStateOf(Offset.Zero)
+    }
+
 
     LaunchedEffect(targetBounds) {
         currentTargetBounds = targetBounds
@@ -51,14 +68,14 @@ fun DraggableTextOverlay(
         modifier = modifier
             .offset {
                 IntOffset(
-                    overlay.textX.roundToInt(),
-                    overlay.textY.roundToInt()
+                    currentTextX.roundToInt(),
+                    currentTextY.roundToInt()
                 )
             }
             .graphicsLayer {
-                scaleX = overlay.scale
-                scaleY = overlay.scale
-                rotationZ = overlay.rotationAngle
+                scaleX = currentScale
+                scaleY = currentScale
+                rotationZ = currentRotation
             }
             .pointerInput(Unit) {
                 customDetectTransformGestures(
@@ -67,25 +84,31 @@ fun DraggableTextOverlay(
                     },
                     onGestureEnd = {
                         isDraggingText.invoke(false)
+                        // Pass the transformation to the callback function
+                        onTransformGestureChanged(
+                            overlay.key,
+                            Offset(currentTextX, currentTextY),
+                            currentScale,
+                            currentRotation
+                        )
+
+                        println("ON UPDATE: ${overlay.key} -- ${Offset(currentTextX, currentTextY)} -- ${currentScale} -- ${currentRotation}")
                     }
                 ) { _, pan, zoom, rotation ->
                     // Adjust the rotation angle by adding the rotation gesture input
-                    overlay.rotationAngle += rotation
+                    currentRotation += rotation
 
                     // Adjust the pan based on current rotation
-                    val adjustedPan = adjustPanForRotation(pan, overlay.rotationAngle)
+                    currentAdjustPan = adjustPanForRotation(pan, currentRotation)
 
                     // Update the overlay state directly with the adjusted pan
-                    overlay.apply {
-                        textX += adjustedPan.x
-                        textY += adjustedPan.y
-                        scale *= zoom
-                    }
+                    currentTextX += currentAdjustPan.x
+                    currentTextY += currentAdjustPan.y
+                    currentScale *= zoom
 
-                    println(currentTargetBounds)
                     // Check if dragged item is within the target bounds
-                    val isWithinTarget = overlay.textX in targetBounds.left..targetBounds.right &&
-                            overlay.textY in targetBounds.top..targetBounds.bottom
+                    val isWithinTarget = currentTextX in targetBounds.left..targetBounds.right &&
+                            currentTextY in targetBounds.top..targetBounds.bottom
 
                     if (isWithinTarget && !isOverTarget) {
                         onTextOverlayToRemove(overlay.key)
@@ -95,13 +118,7 @@ fun DraggableTextOverlay(
                         isOverTarget = false
                     }
 
-                    // Pass the transformation to the callback function
-                    onTransformGestureChanged(
-                        overlay.key,
-                        adjustedPan,
-                        zoom,
-                        rotation
-                    )
+//                    println("${currentTargetBounds} -- $isOverTarget -- $overlay")
                 }
             }
     ) {
