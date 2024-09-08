@@ -2,9 +2,23 @@ package com.densitech.scrollsmooth.ui.video.view
 
 import android.annotation.SuppressLint
 import androidx.annotation.OptIn
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -16,13 +30,12 @@ import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.MediaSource
 import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
-import com.densitech.scrollsmooth.ui.video.model.MediaInfo
 import com.densitech.scrollsmooth.ui.video.model.MediaThumbnailDetail
-import com.densitech.scrollsmooth.ui.video.prefetch.PlayerPool
+import com.densitech.scrollsmooth.ui.video.model.VideoActionParams
+import com.densitech.scrollsmooth.ui.video.model.VideoItemParams
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel.Companion.MAX_DURATION_TIME_TO_SEEK
 import kotlinx.coroutines.delay
 
@@ -30,12 +43,7 @@ import kotlinx.coroutines.delay
 @OptIn(UnstableApi::class)
 @Composable
 fun VideoItemView(
-    playerPool: PlayerPool,
-    isActive: Boolean,
-    currentToken: Int,
-    currentMediaSource: MediaSource,
-    mediaInfo: MediaInfo,
-    isDownloaded: Boolean,
+    params: VideoItemParams,
     onReceiveRatio: (Int, Int, Int) -> Unit,
     onPlayerReady: (Int, ExoPlayer?) -> Unit,
     onPlayerDestroy: (Int) -> Unit,
@@ -47,8 +55,8 @@ fun VideoItemView(
     var ratio by remember {
         mutableStateOf(
             Pair(
-                mediaInfo.metadata.width.toInt(),
-                mediaInfo.metadata.height.toInt()
+                params.mediaInfo.metadata.width.toInt(),
+                params.mediaInfo.metadata.height.toInt()
             )
         )
     }
@@ -60,9 +68,9 @@ fun VideoItemView(
     var onSeekingCurrentDurationPercent by remember { mutableFloatStateOf(0F) }
     var currentPreviewOffsetXFrame by remember { mutableFloatStateOf(0F) }
 
-    val nearestThumbnail by remember(onSeekingCurrentDuration, mediaInfo.thumbnails.medium) {
+    val nearestThumbnail by remember(onSeekingCurrentDuration, params.mediaInfo.thumbnails.medium) {
         derivedStateOf {
-            mediaInfo.thumbnails.medium.findLast { it.time * 1000 <= onSeekingCurrentDuration }
+            params.mediaInfo.thumbnails.medium.findLast { it.time * 1000 <= onSeekingCurrentDuration }
         }
     }
 
@@ -98,8 +106,8 @@ fun VideoItemView(
     }
 
     // LaunchedEffect to handle player position updates
-    LaunchedEffect(isActive) {
-        while (isActive) {
+    LaunchedEffect(params.isActive) {
+        while (params.isActive) {
             exoPlayer?.let {
                 currentPosition = it.currentPosition / it.duration.toFloat()
                 delay(1000)
@@ -110,7 +118,7 @@ fun VideoItemView(
     val videoListener = object : Player.Listener {
         override fun onVideoSizeChanged(videoSize: VideoSize) {
             if (videoSize.width > 0 && videoSize.height > 0) {
-                onReceiveRatio.invoke(currentToken, videoSize.width, videoSize.height)
+                onReceiveRatio.invoke(params.currentToken, videoSize.width, videoSize.height)
                 ratio = Pair(videoSize.width, videoSize.height)
             }
         }
@@ -118,7 +126,7 @@ fun VideoItemView(
 
     fun releasePlayer(player: ExoPlayer?) {
         exoPlayer?.removeListener(videoListener)
-        playerPool.releasePlayer(currentToken, player ?: exoPlayer)
+        params.playerPool.releasePlayer(params.currentToken, player ?: exoPlayer)
         exoPlayer = null
     }
 
@@ -131,28 +139,28 @@ fun VideoItemView(
             }
             player.run {
                 repeatMode = ExoPlayer.REPEAT_MODE_ONE
-                setMediaSource(currentMediaSource)
+                setMediaSource(params.currentMediaSource)
                 seekTo(currentPosition.toLong())
                 videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
                 exoPlayer = player
                 prepare()
-                onPlayerReady(currentToken, player)
+                onPlayerReady(params.currentToken, player)
                 addListener(videoListener)
             }
         }
     }
 
-    DisposableEffect(currentToken) {
+    DisposableEffect(params.currentToken) {
         isInView = true
         if (exoPlayer == null) {
-            playerPool.acquirePlayer(currentToken, ::setupPlayer)
+            params.playerPool.acquirePlayer(params.currentToken, ::setupPlayer)
         } else {
-            onPlayerReady(currentToken, exoPlayer)
+            onPlayerReady(params.currentToken, exoPlayer)
         }
         onDispose {
             isInView = false
             releasePlayer(exoPlayer)
-            onPlayerDestroy(currentToken)
+            onPlayerDestroy(params.currentToken)
         }
     }
 
@@ -223,16 +231,18 @@ fun VideoItemView(
 
             if (!isDraggingSlider) {
                 VideoActionView(
-                    token = currentToken,
-                    likeCount = 10,
-                    commentCount = 10,
-                    shareCount = 10,
-                    isDownloaded = isDownloaded,
+                    params = VideoActionParams(
+                        token = params.currentToken,
+                        likeCount = 10,
+                        commentCount = 10,
+                        shareCount = 10,
+                        isDownloaded = params.isDownloaded
+                    ),
                     onLikeClick = {},
                     onCommentClick = {},
                     onShareClick = {},
                     onDownloadClick = {
-                        onDownloadVideoClick.invoke(currentToken)
+                        onDownloadVideoClick.invoke(params.currentToken)
                     },
                     modifier = Modifier
                         .constrainAs(actionView) {
@@ -242,9 +252,9 @@ fun VideoItemView(
                 )
 
                 OwnerSectionView(
-                    owner = mediaInfo.owner.name,
-                    content = mediaInfo.title,
-                    tags = mediaInfo.tags,
+                    owner = params.mediaInfo.owner.name,
+                    content = params.mediaInfo.title,
+                    tags = params.mediaInfo.tags,
                     onOwnerClick = { owner ->
                         // Handle navigate to owner account here
                         println(owner)

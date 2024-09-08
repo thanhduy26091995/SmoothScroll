@@ -17,7 +17,17 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -32,6 +42,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.video.model.ScreenState
+import com.densitech.scrollsmooth.ui.video.model.VideoItemParams
 import com.densitech.scrollsmooth.ui.video.viewmodel.VideoScreenViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -45,27 +56,19 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewModel) {
-
     val context = LocalContext.current
+    val lifeCycleOwner = LocalLifecycleOwner.current
+
     val mediaItemSource = videoScreenViewModel.mediaItemSource.collectAsState()
     val playerPool = videoScreenViewModel.playerPool.collectAsState()
     val screenState = videoScreenViewModel.screenState.collectAsState()
     val videoDownloadedListState = videoScreenViewModel.videoDownloadedList.collectAsState()
 
-    var currentActiveIndex by remember {
-        mutableIntStateOf(videoScreenViewModel.currentPlayingIndex)
-    }
-    var isPaused by remember {
-        mutableStateOf(false)
-    }
-
-    val mediaList = remember {
-        mutableStateListOf<MediaItem>()
-    }
-
-    val downloadedVideoList = remember {
-        mutableStateListOf<String>()
-    }
+    // State management
+    var currentActiveIndex by remember { mutableIntStateOf(videoScreenViewModel.currentPlayingIndex) }
+    var isPaused by remember { mutableStateOf(false) }
+    val mediaList = remember { mutableStateListOf<MediaItem>() }
+    val downloadedVideoList = remember { mutableStateListOf<String>() }
 
     val fling = PagerDefaults.flingBehavior(
         state = pagerState,
@@ -80,8 +83,6 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
             // Handle permission result
         }
     )
-
-    val lifeCycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifeCycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -182,7 +183,11 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                         val realPage = page % totalPageCount
                         val mediaItem = mediaList.getOrNull(realPage) ?: return@VerticalPager
                         val mediaSource =
-                            videoScreenViewModel.getMediaSourceByMediaItem(context, mediaItem, realPage)
+                            videoScreenViewModel.getMediaSourceByMediaItem(
+                                context,
+                                mediaItem,
+                                realPage
+                            )
                                 ?: return@VerticalPager
 
                         // Ensure playerPool.value is not null
@@ -191,12 +196,14 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                             videoScreenViewModel.getCurrentMediaInfo(mediaItem.mediaMetadata)
 
                         VideoItemView(
-                            playerPool = currentPlayerPool,
-                            isActive = currentActiveIndex == realPage,
-                            currentToken = realPage,
-                            currentMediaSource = mediaSource,
-                            mediaInfo = mediaInfo,
-                            isDownloaded = downloadedVideoList.contains(mediaItem.localConfiguration?.uri.toString()),
+                            params = VideoItemParams(
+                                playerPool = currentPlayerPool,
+                                isActive = currentActiveIndex == realPage,
+                                currentToken = realPage,
+                                currentMediaSource = mediaSource,
+                                mediaInfo = mediaInfo,
+                                isDownloaded = downloadedVideoList.contains(mediaItem.localConfiguration?.uri.toString())
+                            ),
                             onPlayerReady = { token, exoPlayer ->
                                 videoScreenViewModel.onPlayerReady(token, exoPlayer)
                             },
@@ -254,7 +261,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
 
 private fun handleDownloadVideoClick(
     notificationPermission: PermissionState,
-    onDownload: () -> Unit
+    onDownload: () -> Unit,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         // Handle download video here, but need to check permission first
