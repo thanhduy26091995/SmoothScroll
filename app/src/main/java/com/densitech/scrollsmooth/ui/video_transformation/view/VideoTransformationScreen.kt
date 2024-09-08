@@ -62,6 +62,7 @@ import com.densitech.scrollsmooth.ui.text.view.TextOverlayView
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.format
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
+import com.densitech.scrollsmooth.ui.video_transformation.model.SheetExpandedParams
 import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
 import com.densitech.scrollsmooth.ui.video_transformation.viewmodel.VideoTransformationViewModel
 import kotlinx.coroutines.launch
@@ -246,12 +247,14 @@ fun VideoTransformationScreen(
                     currentFraction = progress.floatValue,
                 ) {
                     SheetExpandedContentView(
-                        thumbnails = thumbnails,
-                        selectedVideo = selectedVideo,
-                        isVideoPlaying = isPlaying,
-                        startPosition = trimRange.first,
-                        currentPlayingPosition = currentPosition,
-                        endPosition = trimRange.last,
+                        params = SheetExpandedParams(
+                            thumbnails = thumbnails,
+                            selectedVideo = selectedVideo,
+                            isVideoPlaying = isPlaying,
+                            startPosition = trimRange.first,
+                            currentPlayingPosition = currentPosition,
+                            endPosition = trimRange.last,
+                        ),
                         onPlayClick = {
                             videoTransformationViewModel.setIsPlaying(!isPlaying)
                         },

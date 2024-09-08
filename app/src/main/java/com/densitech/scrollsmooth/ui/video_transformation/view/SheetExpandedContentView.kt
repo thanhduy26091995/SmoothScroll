@@ -24,18 +24,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.utils.HEIGHT_OF_TRIMMING
-import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalThumbnail
-import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
+import com.densitech.scrollsmooth.ui.video_creation.model.VideoTrimmingParams
 import com.densitech.scrollsmooth.ui.video_creation.view.VideoTrimmingView
+import com.densitech.scrollsmooth.ui.video_transformation.model.SheetExpandedParams
 
 @Composable
 fun SheetExpandedContentView(
-    thumbnails: List<DTOLocalThumbnail>,
-    selectedVideo: DTOLocalVideo,
-    isVideoPlaying: Boolean,
-    startPosition: Long,
-    currentPlayingPosition: Long,
-    endPosition: Long,
+    params: SheetExpandedParams,
     onPlayClick: () -> Unit,
     onSeekChange: (Long) -> Unit,
     onTrimChange: (Long, Long) -> Unit,
@@ -57,7 +52,7 @@ fun SheetExpandedContentView(
                 .background(Color.DarkGray)
         ) {
             Icon(
-                painter = if (isVideoPlaying) painterResource(id = R.drawable.ic_pause) else painterResource(
+                painter = if (params.isVideoPlaying) painterResource(id = R.drawable.ic_pause) else painterResource(
                     id = R.drawable.ic_play
                 ),
                 contentDescription = null
@@ -67,7 +62,7 @@ fun SheetExpandedContentView(
         BoxWithConstraints(modifier = Modifier.align(Alignment.Center)) {
             val viewWidth = maxWidth - 24.dp
             val trimmingWidth = viewWidth - (2 * 16).dp
-            val itemWidth = trimmingWidth / thumbnails.size
+            val itemWidth = trimmingWidth / params.thumbnails.size
 
             Row(
                 modifier = Modifier
@@ -75,7 +70,7 @@ fun SheetExpandedContentView(
                     .width(trimmingWidth)
                     .align(Alignment.Center)
             ) {
-                thumbnails.forEach {
+                params.thumbnails.forEach {
                     Image(
                         bitmap = it.thumbnail.asImageBitmap(),
                         contentDescription = null,
@@ -90,11 +85,13 @@ fun SheetExpandedContentView(
             VideoTrimmingView(
                 modifier = Modifier
                     .width(viewWidth),
-                videoDuration = selectedVideo.duration.toLong(),
-                numberOfThumbnailFrame = thumbnails.size - SMOOTH_REVERSED_THUMBNAIL,
-                startPosition = startPosition,
-                currentPosition = currentPlayingPosition,
-                endPosition = endPosition,
+                params = VideoTrimmingParams(
+                    videoDuration = params.selectedVideo.duration.toLong(),
+                    numberOfThumbnailFrame = params.thumbnails.size - SMOOTH_REVERSED_THUMBNAIL,
+                    startPosition = params.startPosition,
+                    currentPosition = params.currentPlayingPosition,
+                    endPosition = params.endPosition,
+                ),
                 onTrimChange = { start, end ->
                     onTrimChange(start, end)
                 },

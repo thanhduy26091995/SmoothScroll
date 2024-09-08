@@ -21,6 +21,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/*
+* @Author: Dennis
+* @Description: View model to control for video transformation screen, its contains some feature
+* 1. Process and load thumbnails
+* 2. Handle trim range for video
+* 3. Control playing state
+* 4. Handle current position
+* 5. Handle text overlay
+* 6. Control exo player from view
+* */
 @HiltViewModel
 class VideoTransformationViewModel @Inject constructor(
 
@@ -49,7 +59,6 @@ class VideoTransformationViewModel @Inject constructor(
     private var _exoPlayer: ExoPlayer? = null
     val exoPlayer: ExoPlayer?
         get() = _exoPlayer
-
 
     fun releaseData() {
         _exoPlayer = null
@@ -154,8 +163,6 @@ class VideoTransformationViewModel @Inject constructor(
     fun onTransformGestureChanged(key: String, pan: Offset, zoom: Float, rotation: Float) {
         val selectedOverlay = _textOverlayList.value.find { it.key == key } ?: return
         val currentZoom = (zoom).coerceIn(0.5f, 5f)
-        val currentOffset = Offset(selectedOverlay.textX, selectedOverlay.textY) + pan
-        val currentRotation = selectedOverlay.rotationAngle + rotation
         // Update overlay
         val newOverlay = selectedOverlay.copy(
             scale = currentZoom,

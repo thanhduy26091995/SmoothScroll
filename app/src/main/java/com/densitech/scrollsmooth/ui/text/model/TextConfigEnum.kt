@@ -1,4 +1,4 @@
-package com.densitech.scrollsmooth.ui.text.view
+package com.densitech.scrollsmooth.ui.text.model
 
 enum class TextConfigEnum {
     COLOR,

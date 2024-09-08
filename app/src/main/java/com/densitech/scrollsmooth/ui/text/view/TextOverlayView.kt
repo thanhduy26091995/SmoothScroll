@@ -51,6 +51,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.densitech.scrollsmooth.R
+import com.densitech.scrollsmooth.ui.text.model.TextAlignmentEnum
+import com.densitech.scrollsmooth.ui.text.model.TextConfigEnum
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
 import com.densitech.scrollsmooth.ui.utils.keyboardAsState
 import kotlin.math.roundToInt
@@ -71,33 +73,14 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
         FontFamily.SansSerif.name
     )
 
-    var selectedFont by remember {
-        mutableStateOf(FontFamily.Monospace.name)
-    }
-
-    var textColor by remember {
-        mutableStateOf(Color.White)
-    }
-
-    var text by remember {
-        mutableStateOf("")
-    }
-
-    var fontSize by remember {
-        mutableFloatStateOf(48f)
-    }
-
-    var textOffset by remember {
-        mutableStateOf(Offset.Zero)
-    }
-
-    var textConfig by remember {
-        mutableStateOf(TextConfigEnum.FONT)
-    }
-
-    var textAlignmentEnum by remember {
-        mutableStateOf(TextAlignmentEnum.CENTER)
-    }
+    // State management
+    var selectedFont by remember { mutableStateOf(FontFamily.Monospace.name) }
+    var textColor by remember { mutableStateOf(Color.White) }
+    var text by remember { mutableStateOf("") }
+    var fontSize by remember { mutableFloatStateOf(48f) }
+    var textOffset by remember { mutableStateOf(Offset.Zero) }
+    var textConfig by remember { mutableStateOf(TextConfigEnum.FONT) }
+    var textAlignmentEnum by remember { mutableStateOf(TextAlignmentEnum.CENTER) }
 
     fun buildResultParams(): TextOverlayParams {
         return TextOverlayParams(

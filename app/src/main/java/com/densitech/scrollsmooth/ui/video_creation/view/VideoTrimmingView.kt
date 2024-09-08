@@ -38,30 +38,27 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.densitech.scrollsmooth.ui.utils.HEIGHT_OF_TRIMMING
+import com.densitech.scrollsmooth.ui.video_creation.model.VideoTrimmingParams
 
 @Composable
 fun VideoTrimmingView(
-    videoDuration: Long,
-    startPosition: Long,
-    currentPosition: Long,
-    endPosition: Long,
-    numberOfThumbnailFrame: Int,
+    params: VideoTrimmingParams,
     onTrimChange: (Long, Long) -> Unit,
     onSeekChange: (Long) -> Unit,
     onDragStateChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var startTrimPosition by remember { mutableLongStateOf(startPosition) }
-    var endTrimPosition by remember { mutableLongStateOf(endPosition) }
-    var centerLinePosition by remember { mutableLongStateOf(currentPosition) }
+    var startTrimPosition by remember { mutableLongStateOf(params.startPosition) }
+    var endTrimPosition by remember { mutableLongStateOf(params.endPosition) }
+    var centerLinePosition by remember { mutableLongStateOf(params.currentPosition) }
     var isDraggingDrawable by remember { mutableStateOf(false) }
     val handleWidth = 20.dp
     val centerLinePadding = 15.dp
 
     // When video playing, changing currentPosition will change center line also
-    LaunchedEffect(currentPosition) {
-        if (currentPosition > 0) {
-            centerLinePosition = currentPosition
+    LaunchedEffect(params.currentPosition) {
+        if (params.currentPosition > 0) {
+            centerLinePosition = params.currentPosition
         }
     }
 
@@ -84,16 +81,22 @@ fun VideoTrimmingView(
             calculateOffsetDp(
                 density,
                 startTrimPosition,
-                videoDuration,
+                params.videoDuration,
                 timelineWidth,
                 handleWidthPx
             )
         val endTrimOffsetDp =
-            calculateOffsetDp(density, endTrimPosition, videoDuration, timelineWidth, handleWidthPx)
+            calculateOffsetDp(
+                density,
+                endTrimPosition,
+                params.videoDuration,
+                timelineWidth,
+                handleWidthPx
+            )
         val centerLineOffsetDp = calculateCenterLineOffsetDp(
             density = density,
             centerLinePosition = centerLinePosition,
-            videoDuration = videoDuration,
+            videoDuration = params.videoDuration,
             timelineWidth = timelineWidth,
             centerLinePadding = centerLinePaddingOffsetPx,
         )
@@ -120,7 +123,7 @@ fun VideoTrimmingView(
                 0L,
                 endTrimPosition,
                 timelineWidth,
-                videoDuration
+                params.videoDuration
             )
             if (startTrimPosition > centerLinePosition) {
                 centerLinePosition = startTrimPosition
@@ -145,20 +148,20 @@ fun VideoTrimmingView(
                 delta,
                 endTrimPosition,
                 startTrimPosition,
-                videoDuration,
+                params.videoDuration,
                 timelineWidth,
-                videoDuration
+                params.videoDuration
             )
             if (endTrimPosition < centerLinePosition) {
                 centerLinePosition = endTrimPosition
             }
         }
 
-        if (numberOfThumbnailFrame > 0) {
+        if (params.numberOfThumbnailFrame > 0) {
             DrawCenterLine(
                 offset = centerLineOffsetDp,
                 isDraggingDrawable = isDraggingDrawable,
-                animatedDuration = (videoDuration / (numberOfThumbnailFrame)).toInt(),
+                animatedDuration = (params.videoDuration / (params.numberOfThumbnailFrame)).toInt(),
                 onDragStateChange = { isDragging ->
                     onDragStateChange(isDragging)
                 }
@@ -167,7 +170,7 @@ fun VideoTrimmingView(
                     delta,
                     centerLinePosition,
                     timelineWidth,
-                    videoDuration
+                    params.videoDuration
                 )
                 centerLinePosition = newTrim.coerceIn(
                     startTrimPosition,
@@ -346,11 +349,13 @@ fun VideoTrimmingPreview() {
     ) {
         VideoTrimmingView(
             modifier = Modifier.padding(horizontal = 16.dp),
-            startPosition = 0,
-            endPosition = 10000,
-            videoDuration = 10000,
-            numberOfThumbnailFrame = 15,
-            currentPosition = 4000,
+            params = VideoTrimmingParams(
+                startPosition = 0,
+                endPosition = 10000,
+                videoDuration = 10000,
+                numberOfThumbnailFrame = 15,
+                currentPosition = 4000,
+            ),
             onTrimChange = { _, _ ->
 
             },

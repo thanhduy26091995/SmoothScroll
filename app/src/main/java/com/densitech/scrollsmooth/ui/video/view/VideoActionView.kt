@@ -16,14 +16,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.utils.clickableNoRipple
+import com.densitech.scrollsmooth.ui.video.model.VideoActionParams
 
 @Composable
 fun VideoActionView(
-    token: Int,
-    likeCount: Int,
-    commentCount: Int,
-    shareCount: Int,
-    isDownloaded: Boolean,
+    params: VideoActionParams,
     onLikeClick: (Int) -> Unit,
     onCommentClick: (Int) -> Unit,
     onShareClick: (Int) -> Unit,
@@ -33,36 +30,36 @@ fun VideoActionView(
     Column(modifier = modifier) {
         VideoActionItemView(
             icon = painterResource(id = R.drawable.ic_heart_icon),
-            value = "$likeCount",
+            value = "${params.likeCount}",
             onItemClick = {
-                onLikeClick.invoke(token)
+                onLikeClick.invoke(params.token)
             }
         )
 
         VideoActionItemView(
             icon = painterResource(id = R.drawable.ic_comment_icon),
-            value = "$commentCount",
+            value = "${params.commentCount}",
             onItemClick = {
-                onCommentClick.invoke(token)
+                onCommentClick.invoke(params.token)
             },
             modifier = Modifier.padding(top = 10.dp)
         )
 
         VideoActionItemView(
             icon = painterResource(id = R.drawable.ic_outline_share_24),
-            value = "$shareCount",
+            value = "${params.shareCount}",
             onItemClick = {
-                onShareClick.invoke(token)
+                onShareClick.invoke(params.token)
             },
             modifier = Modifier.padding(top = 10.dp),
         )
 
-        if (!isDownloaded) {
+        if (!params.isDownloaded) {
             VideoActionItemView(
                 icon = painterResource(id = R.drawable.ic_download_for_offline),
                 value = "",
                 onItemClick = {
-                    onDownloadClick(token)
+                    onDownloadClick(params.token)
                 },
                 modifier = Modifier.padding(top = 10.dp),
             )
@@ -103,11 +100,13 @@ private fun VideoActionItemView(
 @Preview
 private fun VideoActionViewPreview() {
     VideoActionView(
-        token = 1,
-        likeCount = 10,
-        commentCount = 10,
-        shareCount = 10,
-        isDownloaded = false, {
+        params = VideoActionParams(
+            token = 1,
+            likeCount = 10,
+            commentCount = 10,
+            shareCount = 10,
+            isDownloaded = false
+        ), {
 
         },
         {

@@ -26,7 +26,9 @@ import androidx.compose.ui.unit.dp
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
 import com.densitech.scrollsmooth.ui.text.view.stringToFont
 import com.densitech.scrollsmooth.ui.utils.customDetectTransformGestures
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 fun DraggableTextOverlay(
@@ -39,26 +41,20 @@ fun DraggableTextOverlay(
     modifier: Modifier = Modifier,
 ) {
     // State management
+    var currentOverlay by remember {
+        mutableStateOf(overlay)
+    }
     var isOverTarget by remember { mutableStateOf(false) }
-    var currentTargetBounds by remember {
-        mutableStateOf(targetBounds)
-    }
-    var currentTextX by remember {
-        mutableFloatStateOf(overlay.textX)
-    }
-    var currentTextY by remember {
-        mutableFloatStateOf(overlay.textY)
-    }
-    var currentScale by remember {
-        mutableFloatStateOf(overlay.scale)
-    }
-    var currentRotation by remember {
-        mutableFloatStateOf(overlay.rotationAngle)
-    }
-    var currentAdjustPan by remember {
-        mutableStateOf(Offset.Zero)
-    }
+    var currentTargetBounds by remember { mutableStateOf(targetBounds) }
+    var currentTextX by remember { mutableFloatStateOf(overlay.textX) }
+    var currentTextY by remember { mutableFloatStateOf(overlay.textY) }
+    var currentScale by remember { mutableFloatStateOf(overlay.scale) }
+    var currentRotation by remember { mutableFloatStateOf(overlay.rotationAngle) }
+    var currentAdjustPan by remember { mutableStateOf(Offset.Zero) }
 
+    LaunchedEffect(overlay) {
+        currentOverlay = overlay
+    }
 
     LaunchedEffect(targetBounds) {
         currentTargetBounds = targetBounds
@@ -91,8 +87,6 @@ fun DraggableTextOverlay(
                             currentScale,
                             currentRotation
                         )
-
-                        println("ON UPDATE: ${overlay.key} -- ${Offset(currentTextX, currentTextY)} -- ${currentScale} -- ${currentRotation}")
                     }
                 ) { _, pan, zoom, rotation ->
                     // Adjust the rotation angle by adding the rotation gesture input
@@ -106,19 +100,24 @@ fun DraggableTextOverlay(
                     currentTextY += currentAdjustPan.y
                     currentScale *= zoom
 
+                    println("CURRENT SCALE: $currentScale -- ${currentOverlay.scale}")
+
                     // Check if dragged item is within the target bounds
-                    val isWithinTarget = currentTextX in targetBounds.left..targetBounds.right &&
-                            currentTextY in targetBounds.top..targetBounds.bottom
+                    val isWithinTarget =
+                        currentTextX in currentTargetBounds.left..currentTargetBounds.right &&
+                                currentTextY in currentTargetBounds.top..currentTargetBounds.bottom
 
                     if (isWithinTarget && !isOverTarget) {
                         onTextOverlayToRemove(overlay.key)
                         isOverTarget = true
+                        // In case user drag text inside of delete area, it will auto scale to 0.5f
+                        currentScale = 0.5f
                     } else if (!isWithinTarget && isOverTarget) {
                         onTextOverlayNoLongerOverTarget()
                         isOverTarget = false
+                        // In case user drag text outside of delete area, it will update scale back
+                        currentScale = currentOverlay.scale
                     }
-
-//                    println("${currentTargetBounds} -- $isOverTarget -- $overlay")
                 }
             }
     ) {
@@ -137,4 +136,13 @@ fun DraggableTextOverlay(
             )
         }
     }
+}
+
+private fun adjustPanForRotation(pan: Offset, rotationAngle: Float): Offset {
+    val angleInRadians = Math.toRadians(rotationAngle.toDouble())
+
+    val adjustedPanX = (pan.x * cos(angleInRadians) - pan.y * sin(angleInRadians)).toFloat()
+    val adjustedPanY = (pan.x * sin(angleInRadians) + pan.y * cos(angleInRadians)).toFloat()
+
+    return Offset(adjustedPanX, adjustedPanY)
 }
