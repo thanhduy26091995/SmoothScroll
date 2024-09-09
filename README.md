@@ -12,6 +12,7 @@ https://github.com/user-attachments/assets/3898de67-bd3e-4132-8085-c849ce3d133c
 - **Smooth Scrolling Performance:** Designed to handle fast scrolling with optimized performance.
 - **Thumbnail Preview:** View video thumbnails while seeking to different durations in the video.
 - **Caching and Prefetching:** Efficiently caches and prefetches video and thumbnail data to enhance user experience and reduce loading times.
+- **Video creation** Create custom video by select video, add audio, trim video, add text overlay
 
 ## Upcoming Features
 
