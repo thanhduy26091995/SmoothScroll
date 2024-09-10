@@ -182,6 +182,13 @@ fun VideoTransformationScreen(
                 last = selectedVideo.duration.toLong()
             )
         }
+
+        // Calculate scaling mode base on ratio
+        if (selectedVideo.width > selectedVideo.height) {
+            exoPlayer.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+        } else {
+            exoPlayer.videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+        }
     }
 
     // Base on this flag to start or pause video

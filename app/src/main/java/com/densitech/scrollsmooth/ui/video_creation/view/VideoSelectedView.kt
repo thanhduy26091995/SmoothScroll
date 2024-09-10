@@ -17,6 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -38,11 +39,16 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
         mutableIntStateOf(Player.STATE_BUFFERING)
     }
 
+    var currentRatio by remember {
+        mutableFloatStateOf(data.width / data.height.toFloat())
+    }
+
     val ratio = data.width / data.height.toFloat()
     val context = LocalContext.current
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(Uri.parse(data.videoPath)))
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             playWhenReady = !isPaused
 
             addListener(object : Player.Listener {
@@ -59,6 +65,13 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
         exoPlayer.apply {
             setMediaItem(MediaItem.fromUri(Uri.parse(data.videoPath)))
             prepare()
+        }
+
+        // Update ratio
+        currentRatio = if (data.width > data.height) {
+            data.height / data.width.toFloat()
+        } else {
+            data.width / data.height.toFloat()
         }
     }
 
@@ -88,8 +101,6 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
         }
     }
 
-    val validRatio = if (ratio.isNaN() || ratio <= 0 || ratio > 1f) 1f else ratio
-
     Box(modifier = modifier) {
         PlayerSurface(
             player = exoPlayer,
@@ -97,7 +108,7 @@ fun VideoSelectedView(data: DTOLocalVideo, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxHeight()
-                .aspectRatio(validRatio)
+                .aspectRatio(currentRatio)
                 .clickableNoRipple {
                     exoPlayer.run {
                         playWhenReady = !playWhenReady

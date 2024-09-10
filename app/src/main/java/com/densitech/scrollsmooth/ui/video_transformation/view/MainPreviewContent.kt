@@ -35,15 +35,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
 import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
-import kotlin.math.cos
-import kotlin.math.sin
 
+@UnstableApi
 @Suppress("DEPRECATION")
 @Composable
 fun MainPreviewContent(
@@ -98,8 +98,8 @@ fun MainPreviewContent(
         VideoPlayerView(
             exoPlayer = exoPlayer,
             modifier = Modifier
-                .align(Alignment.Center)
                 .fillMaxSize()
+                .align(Alignment.Center)
         )
 
         // Back and more buttons - make sure these are not blocked
