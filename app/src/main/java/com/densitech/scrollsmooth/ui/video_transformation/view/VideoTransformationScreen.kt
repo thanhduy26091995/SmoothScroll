@@ -8,35 +8,14 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberStandardBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,10 +37,12 @@ import com.densitech.scrollsmooth.ui.audio.AudioSelectionViewModel
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetCollapsed
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetContent
 import com.densitech.scrollsmooth.ui.bottom_sheet.SheetExpanded
+import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
 import com.densitech.scrollsmooth.ui.text.view.TextOverlayView
 import com.densitech.scrollsmooth.ui.utils.DEFAULT_FRACTION
 import com.densitech.scrollsmooth.ui.utils.format
 import com.densitech.scrollsmooth.ui.video_creation.model.DTOLocalVideo
+import com.densitech.scrollsmooth.ui.video_transformation.model.MainPreviewContentParams
 import com.densitech.scrollsmooth.ui.video_transformation.model.SheetExpandedParams
 import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
 import com.densitech.scrollsmooth.ui.video_transformation.viewmodel.VideoTransformationViewModel
@@ -145,6 +126,17 @@ fun VideoTransformationScreen(
     // Flag to control text overlay
     var isShowTextingOverlay by rememberSaveable {
         mutableStateOf(false)
+    }
+
+    var selectedTextOverlay by remember {
+        mutableStateOf(TextOverlayParams.default())
+    }
+
+    LaunchedEffect(isShowTextingOverlay) {
+        if (!isShowTextingOverlay) {
+            // Reset selected text overlay
+            selectedTextOverlay = TextOverlayParams.default()
+        }
     }
 
     // Save exo player instance to viewmodel
@@ -322,10 +314,12 @@ fun VideoTransformationScreen(
             }
 
             MainPreviewContent(
-                exoPlayer = exoPlayer,
-                currentFraction = progress.floatValue,
-                isShowingTextOverlay = isShowTextingOverlay,
-                textOverlayList = textOverlayList,
+                params = MainPreviewContentParams(
+                    exoPlayer = exoPlayer,
+                    currentFraction = progress.floatValue,
+                    isShowingTextOverlay = isShowTextingOverlay,
+                    textOverlayList = textOverlayList
+                ),
                 onBackClick = {
                     navController.popBackStack()
                 },
@@ -353,6 +347,11 @@ fun VideoTransformationScreen(
                 onTextOverlayDeleted = { key ->
                     videoTransformationViewModel.removeTextOverlayById(key)
                 },
+                onEditTextOverlay = { textOverlay ->
+                    selectedTextOverlay = textOverlay
+                    // Show edit field
+                    isShowTextingOverlay = true
+                },
                 modifier = Modifier
                     .width(deviceWidth * (1 - progress.floatValue))
                     .height(playerHeight * (1 - progress.floatValue))
@@ -375,6 +374,7 @@ fun VideoTransformationScreen(
 
         if (isShowTextingOverlay) {
             TextOverlayView(
+                selectedTextOverlay = selectedTextOverlay,
                 onDoneClick = { textOverlayParams ->
                     isShowTextingOverlay = false
                     videoTransformationViewModel.addNewTextOverlay(textOverlayParams)

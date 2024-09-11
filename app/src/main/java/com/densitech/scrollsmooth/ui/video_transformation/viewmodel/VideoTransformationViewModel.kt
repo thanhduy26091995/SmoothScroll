@@ -66,6 +66,7 @@ class VideoTransformationViewModel @Inject constructor(
         _currentPosition.value = 0
         _trimRange.value = LongRange(0, 0)
         _thumbnails.value = emptyList()
+        _textOverlayList.value = emptyList()
     }
 
     fun setIsPlaying(isPlaying: Boolean) {
@@ -150,6 +151,8 @@ class VideoTransformationViewModel @Inject constructor(
 
     fun addNewTextOverlay(params: TextOverlayParams) {
         val currentList = _textOverlayList.value.toMutableList()
+        // Remove duplicate first
+        currentList.removeAll { it.key == params.key }
         currentList.add(params)
         _textOverlayList.value = currentList
     }

@@ -8,5 +8,6 @@ enum class TextConfigEnum {
 enum class TextAlignmentEnum {
     LEFT,
     CENTER,
-    RIGHT
+    RIGHT,
+    FLEXIBLE
 }

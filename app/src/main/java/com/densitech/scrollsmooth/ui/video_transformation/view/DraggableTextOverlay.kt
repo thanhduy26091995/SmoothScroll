@@ -1,18 +1,13 @@
 package com.densitech.scrollsmooth.ui.video_transformation.view
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -24,6 +19,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
+import com.densitech.scrollsmooth.ui.text.view.DropdownSelection
 import com.densitech.scrollsmooth.ui.text.view.stringToFont
 import com.densitech.scrollsmooth.ui.utils.customDetectTransformGestures
 import kotlin.math.cos
@@ -38,6 +34,7 @@ fun DraggableTextOverlay(
     onTransformGestureChanged: (String, Offset, Float, Float) -> Unit,
     onTextOverlayToRemove: (String) -> Unit,
     onTextOverlayNoLongerOverTarget: () -> Unit,
+    onEditTextOverlay: (TextOverlayParams) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // State management
@@ -51,6 +48,7 @@ fun DraggableTextOverlay(
     var currentScale by remember { mutableFloatStateOf(overlay.scale) }
     var currentRotation by remember { mutableFloatStateOf(overlay.rotationAngle) }
     var currentAdjustPan by remember { mutableStateOf(Offset.Zero) }
+    var isShowEditMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(overlay) {
         currentOverlay = overlay
@@ -100,8 +98,6 @@ fun DraggableTextOverlay(
                     currentTextY += currentAdjustPan.y
                     currentScale *= zoom
 
-                    println("CURRENT SCALE: $currentScale -- ${currentOverlay.scale}")
-
                     // Check if dragged item is within the target bounds
                     val isWithinTarget =
                         currentTextX in currentTargetBounds.left..currentTargetBounds.right &&
@@ -120,6 +116,11 @@ fun DraggableTextOverlay(
                     }
                 }
             }
+            .pointerInput(Unit) {
+                detectTapGestures {
+                    isShowEditMenu = true
+                }
+            }
     ) {
         Box(
             modifier = Modifier
@@ -135,6 +136,17 @@ fun DraggableTextOverlay(
                 fontFamily = stringToFont(overlay.font),
             )
         }
+
+        DropdownSelection(
+            isShowDropdownSelection = isShowEditMenu,
+            onEditClick = {
+                onEditTextOverlay.invoke(currentOverlay)
+                isShowEditMenu = false
+            },
+            onDismissRequest = {
+                isShowEditMenu = false
+            }
+        )
     }
 }
 
