@@ -29,7 +29,6 @@ fun formatTime(timeInMilliSeconds: Long, timeFormat: String = "%02d:%02d"): Stri
     return String.format(Locale.getDefault(), timeFormat, minutes, seconds)
 }
 
-
 suspend fun PointerInputScope.customDetectTransformGestures(
     panZoomLock: Boolean = false,
     onGestureStart: (() -> Unit)? = null,
@@ -47,7 +46,10 @@ suspend fun PointerInputScope.customDetectTransformGestures(
 
         val input = awaitFirstDown(requireUnconsumed = false)
         processingEvents.add(input.id)
-        onGestureStart?.invoke()
+
+        // Gesture starts when the first pointer touches the screen
+        var gestureStarted = false
+
         do {
             val event = awaitPointerEvent()
             val canceled = event.changes.fastAny { it.isConsumed }
@@ -66,15 +68,23 @@ suspend fun PointerInputScope.customDetectTransformGestures(
                     val rotationMotion = abs(rotation * PI.toFloat() * centroidSize / 180f)
                     val panMotion = pan.getDistance()
 
+                    // Check if the motion is large enough to be considered a gesture
                     if (zoomMotion > touchSlop ||
                         rotationMotion > touchSlop ||
                         panMotion > touchSlop
                     ) {
                         pastTouchSlop = true
                         lockedToPanZoom = panZoomLock && rotationMotion < touchSlop
+
+                        // Trigger onGestureStart when we detect the start of a gesture
+                        if (!gestureStarted) {
+                            onGestureStart?.invoke()
+                            gestureStarted = true
+                        }
                     }
                 }
 
+                // Perform the gesture if past touch slop
                 if (pastTouchSlop) {
                     val centroid = event.calculateCentroid(useCurrent = false)
                     val effectiveRotation = if (lockedToPanZoom) 0f else rotationChange
@@ -92,9 +102,15 @@ suspend fun PointerInputScope.customDetectTransformGestures(
                 }
             }
         } while (!canceled && event.changes.fastAny { it.pressed })
+
+        // When all pointers are released, remove the input and end the gesture
         processingEvents.remove(input.id)
         if (processingEvents.isEmpty()) {
-            onGestureEnd?.invoke()
+            // Only trigger onGestureEnd after the gesture has ended
+            if (gestureStarted) {
+                onGestureEnd?.invoke()
+                gestureStarted = false
+            }
         }
     }
 }
