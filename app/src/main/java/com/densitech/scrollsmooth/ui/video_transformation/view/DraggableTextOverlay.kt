@@ -7,7 +7,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -38,9 +44,7 @@ fun DraggableTextOverlay(
     modifier: Modifier = Modifier,
 ) {
     // State management
-    var currentOverlay by remember {
-        mutableStateOf(overlay)
-    }
+    var currentOverlay by remember { mutableStateOf(overlay) }
     var isOverTarget by remember { mutableStateOf(false) }
     var currentTargetBounds by remember { mutableStateOf(targetBounds) }
     var currentTextX by remember { mutableFloatStateOf(overlay.textX) }
@@ -131,7 +135,7 @@ fun DraggableTextOverlay(
             // Text inside the overlay
             Text(
                 text = overlay.text,
-                fontSize = with(LocalDensity.current) { (overlay.fontSize * overlay.scale).toSp() },
+                fontSize = with(LocalDensity.current) { (overlay.fontSize * currentScale).toSp() },
                 color = overlay.textColor,
                 fontFamily = stringToFont(overlay.font),
             )
