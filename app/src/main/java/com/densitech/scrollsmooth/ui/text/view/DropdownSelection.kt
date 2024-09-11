@@ -1,6 +1,8 @@
 package com.densitech.scrollsmooth.ui.text.view
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -24,13 +26,14 @@ fun DropdownSelection(
     DropdownMenu(
         expanded = isShowDropdownSelection,
         onDismissRequest = onDismissRequest,
-        offset = DpOffset(x = 0.dp, y = 10.dp),
+        offset = DpOffset(x = 50.dp, y = (-5).dp),
         modifier = Modifier
-            .background(Color.Transparent.copy(alpha = 0.6f))
+            .background(Color.Transparent)
+
     ) {
         DropdownMenuItem(
             text = {
-                Row {
+                Row(horizontalArrangement = Arrangement.Start) {
                     Icon(
                         imageVector = Icons.Default.Create,
                         contentDescription = null,
@@ -40,6 +43,7 @@ fun DropdownSelection(
                     Text("Edit", modifier = Modifier.padding(start = 10.dp), color = Color.White)
                 }
             },
+            contentPadding = PaddingValues(end = 40.dp, start = 10.dp),
             onClick = { onEditClick.invoke() }
         )
     }

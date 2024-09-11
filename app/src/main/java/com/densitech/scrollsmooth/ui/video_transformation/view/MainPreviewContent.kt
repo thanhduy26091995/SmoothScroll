@@ -6,21 +6,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,20 +31,19 @@ import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
 import com.densitech.scrollsmooth.ui.video.PlayerSurface
 import com.densitech.scrollsmooth.ui.video.SURFACE_TYPE_SURFACE_VIEW
+import com.densitech.scrollsmooth.ui.video_transformation.model.MainPreviewContentParams
 import com.densitech.scrollsmooth.ui.video_transformation.model.TransformationAction
 
 @UnstableApi
 @Suppress("DEPRECATION")
 @Composable
 fun MainPreviewContent(
-    exoPlayer: ExoPlayer,
-    currentFraction: Float,
-    isShowingTextOverlay: Boolean,
-    textOverlayList: List<TextOverlayParams>,
+    params: MainPreviewContentParams,
     onTransformGestureChanged: (String, Offset, Float, Float) -> Unit,
     onBackClick: () -> Unit,
     onActionClick: (TransformationAction) -> Unit,
     onTextOverlayDeleted: (String) -> Unit,
+    onEditTextOverlay: (TextOverlayParams) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -96,14 +85,14 @@ fun MainPreviewContent(
     ) {
         // The video player
         VideoPlayerView(
-            exoPlayer = exoPlayer,
+            exoPlayer = params.exoPlayer,
             modifier = Modifier
                 .fillMaxSize()
                 .align(Alignment.Center)
         )
 
         // Back and more buttons - make sure these are not blocked
-        if (currentFraction == 0f && !isShowingTextOverlay && !isDraggingText) {
+        if (params.currentFraction == 0f && !params.isShowingTextOverlay && !isDraggingText) {
             TopActionButtons(
                 onBackClick = {
                     onBackClick.invoke()
@@ -149,31 +138,34 @@ fun MainPreviewContent(
             )
         }
 
-        textOverlayList.forEach { overlay ->
-            DraggableTextOverlay(
-                overlay = overlay,
-                targetBounds = targetBounds.value,
-                onTransformGestureChanged = onTransformGestureChanged,
-                onTextOverlayToRemove = { key ->
-                    textOverlayToRemove = key
-                    isOverTarget = true
-                    vibrator.vibrate(
-                        VibrationEffect.createOneShot(
-                            50,
-                            VibrationEffect.DEFAULT_AMPLITUDE
+        if (!params.isShowingTextOverlay) {
+            params.textOverlayList.forEach { overlay ->
+                DraggableTextOverlay(
+                    overlay = overlay,
+                    targetBounds = targetBounds.value,
+                    onTransformGestureChanged = onTransformGestureChanged,
+                    onTextOverlayToRemove = { key ->
+                        textOverlayToRemove = key
+                        isOverTarget = true
+                        vibrator.vibrate(
+                            VibrationEffect.createOneShot(
+                                50,
+                                VibrationEffect.DEFAULT_AMPLITUDE
+                            )
                         )
-                    )
-                },
-                onTextOverlayNoLongerOverTarget = {
-                    isOverTarget = false
-                    textOverlayToRemove = ""
-                },
-                isDraggingText = {
-                    isDraggingText = it
-                },
-                modifier = Modifier
-                    .padding(16.dp)
-            )
+                    },
+                    onTextOverlayNoLongerOverTarget = {
+                        isOverTarget = false
+                        textOverlayToRemove = ""
+                    },
+                    onEditTextOverlay = onEditTextOverlay,
+                    isDraggingText = {
+                        isDraggingText = it
+                    },
+                    modifier = Modifier
+                        .padding(16.dp)
+                )
+            }
         }
     }
 }

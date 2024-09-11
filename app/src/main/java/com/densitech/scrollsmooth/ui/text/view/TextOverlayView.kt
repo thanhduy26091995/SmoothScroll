@@ -2,18 +2,7 @@ package com.densitech.scrollsmooth.ui.text.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -21,13 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -42,9 +25,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
@@ -54,11 +39,15 @@ import com.densitech.scrollsmooth.R
 import com.densitech.scrollsmooth.ui.text.model.TextAlignmentEnum
 import com.densitech.scrollsmooth.ui.text.model.TextConfigEnum
 import com.densitech.scrollsmooth.ui.text.model.TextOverlayParams
-import com.densitech.scrollsmooth.ui.utils.keyboardAsState
+import java.util.UUID
 import kotlin.math.roundToInt
 
 @Composable
-fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier = Modifier) {
+fun TextOverlayView(
+    selectedTextOverlay: TextOverlayParams,
+    onDoneClick: (TextOverlayParams) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val localDensity = LocalDensity.current
     val localConfiguration = LocalConfiguration.current
     val focusRequester = remember {
@@ -74,33 +63,57 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
     )
 
     // State management
-    var selectedFont by remember { mutableStateOf(FontFamily.Monospace.name) }
-    var textColor by remember { mutableStateOf(Color.White) }
-    var text by remember { mutableStateOf("") }
-    var fontSize by remember { mutableFloatStateOf(48f) }
-    var textOffset by remember { mutableStateOf(Offset.Zero) }
+    var selectedFont by remember { mutableStateOf(selectedTextOverlay.font) }
+    var textColor by remember { mutableStateOf(selectedTextOverlay.textColor) }
+    var fontSize by remember { mutableFloatStateOf(selectedTextOverlay.fontSize) }
+    var textOffset by remember {
+        mutableStateOf(
+            Offset(
+                x = selectedTextOverlay.textX,
+                y = selectedTextOverlay.textY
+            )
+        )
+    }
     var textConfig by remember { mutableStateOf(TextConfigEnum.FONT) }
     var textAlignmentEnum by remember { mutableStateOf(TextAlignmentEnum.CENTER) }
-
-    fun buildResultParams(): TextOverlayParams {
-        return TextOverlayParams(
-            text = text,
-            textColor = textColor,
-            fontSize = fontSize,
-            font = selectedFont,
-            textX = textOffset.x,
-            textY = textOffset.y,
-            scale = 1f,
-            rotationAngle = 0f
+    var textFieldValue by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = selectedTextOverlay.text,
+                selection = TextRange(selectedTextOverlay.text.length)
+            )
         )
     }
 
-    val isKeyboardOpen by keyboardAsState() // true or false
-    LaunchedEffect(isKeyboardOpen) {
-        if (!isKeyboardOpen && text.isNotEmpty()) {
-            onDoneClick(buildResultParams())
-            return@LaunchedEffect
+    fun buildResultParams(): TextOverlayParams {
+        val key = selectedTextOverlay.key.ifEmpty {
+            UUID.randomUUID().toString()
         }
+
+        val offset = if (selectedTextOverlay.key.isEmpty()) {
+            textOffset
+        } else {
+            Offset(x = selectedTextOverlay.textX, y = selectedTextOverlay.textY)
+        }
+
+        val textAlignment = if (selectedTextOverlay.key.isEmpty()) {
+            textAlignmentEnum
+        } else {
+            TextAlignmentEnum.FLEXIBLE
+        }
+
+        return TextOverlayParams(
+            key = key,
+            text = textFieldValue.text,
+            textColor = textColor,
+            fontSize = fontSize,
+            font = selectedFont,
+            textX = offset.x,
+            textY = offset.y,
+            scale = 1f,
+            rotationAngle = 0f,
+            textAlignment = textAlignment
+        )
     }
 
     LaunchedEffect(true) {
@@ -128,7 +141,7 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
                 )
             }
 
-            TextAlignmentEnum.CENTER -> {
+            TextAlignmentEnum.CENTER, TextAlignmentEnum.FLEXIBLE -> {
                 Offset(
                     x = (screenWidth - textWidth) / 2,
                     y = offsetHeight
@@ -153,12 +166,20 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
                 detectTapGestures {
                     // Send the tap event to the parent
                     keyboardController?.hide()
+
+                    // Send event to parent
+                    onDoneClick(buildResultParams())
                 }
             }
     ) {
         TextField(
-            value = text,
-            onValueChange = { text = it },
+            value = textFieldValue,
+            onValueChange = { newValue ->
+                textFieldValue = newValue.copy(
+                    text = newValue.text,
+                    selection = TextRange(newValue.text.length)
+                )
+            },
             label = {},
             modifier = Modifier
                 .offset { IntOffset(textOffset.x.roundToInt(), textOffset.y.roundToInt()) }
@@ -189,12 +210,14 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
                     TextAlignmentEnum.LEFT -> TextAlignmentEnum.CENTER
                     TextAlignmentEnum.CENTER -> TextAlignmentEnum.RIGHT
                     TextAlignmentEnum.RIGHT -> TextAlignmentEnum.LEFT
+                    TextAlignmentEnum.FLEXIBLE -> TextAlignmentEnum.CENTER
                 }
             }) {
                 val alignmentIcon = when (textAlignmentEnum) {
                     TextAlignmentEnum.LEFT -> R.drawable.baseline_format_align_left_24
                     TextAlignmentEnum.CENTER -> R.drawable.baseline_format_align_center_24
                     TextAlignmentEnum.RIGHT -> R.drawable.baseline_format_align_right_24
+                    TextAlignmentEnum.FLEXIBLE -> R.drawable.baseline_format_align_center_24
                 }
                 Icon(
                     painter = painterResource(id = alignmentIcon),
@@ -306,5 +329,5 @@ fun TextOverlayView(onDoneClick: (TextOverlayParams) -> Unit, modifier: Modifier
 @Composable
 @Preview
 private fun TextOverlayPreview() {
-    TextOverlayView(onDoneClick = {})
+    TextOverlayView(onDoneClick = {}, selectedTextOverlay = TextOverlayParams.default())
 }
