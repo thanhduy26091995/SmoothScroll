@@ -18,9 +18,9 @@ https://github.com/user-attachments/assets/3898de67-bd3e-4132-8085-c849ce3d133c
 
 - **Adaptive Video Streaming:** Adjust video quality based on network conditions to provide a better streaming experience.
 - **Video Preview during Adaptive Streaming:** Preview video content while watching adaptive video streams.
-- **Video Download:** Ability to download videos for offline viewing.
 - **Configurable Playback Behavior:** Customize video playback settings such as auto-play and buffering strategies.
 - **Customize Video:** User can customize video by trimming video, select audio then apply to video, changing some audio and video effect, then can export that change to local
+- **Load more:** Load more video for short video
 
 ## Video Playback and Thumbnail Preview
 
