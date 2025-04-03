@@ -22,8 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.C
@@ -67,13 +67,13 @@ fun VideoTransformationScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val localConfiguration = LocalConfiguration.current
-    val lifeCycleOwner = LocalLifecycleOwner.current
+    val lifeCycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     // Create exo instance
     val exoPlayer =
         rememberExoPlayer(
             context = context,
-            videoUri = Uri.parse(selectedVideo.videoPath),
+            videoUri = selectedVideo.videoPath.toUri(),
             onVideoStateChanged = { state ->
                 if (state == Player.STATE_ENDED) {
                     videoTransformationViewModel.onVideoEnded()

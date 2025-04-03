@@ -13,16 +13,17 @@ class CustomAnalyticsListener : AnalyticsListener {
     override fun onLoadStarted(
         eventTime: AnalyticsListener.EventTime,
         loadEventInfo: LoadEventInfo,
-        mediaLoadData: MediaLoadData
+        mediaLoadData: MediaLoadData,
+        retryCount: Int,
     ) {
-        super.onLoadStarted(eventTime, loadEventInfo, mediaLoadData)
+        super.onLoadStarted(eventTime, loadEventInfo, mediaLoadData, retryCount)
         logLoadEvent("Load started", loadEventInfo, mediaLoadData)
     }
 
     override fun onLoadCompleted(
         eventTime: AnalyticsListener.EventTime,
         loadEventInfo: LoadEventInfo,
-        mediaLoadData: MediaLoadData
+        mediaLoadData: MediaLoadData,
     ) {
         super.onLoadCompleted(eventTime, loadEventInfo, mediaLoadData)
         logLoadEvent("Load completed", loadEventInfo, mediaLoadData)
@@ -31,7 +32,7 @@ class CustomAnalyticsListener : AnalyticsListener {
     override fun onLoadCanceled(
         eventTime: AnalyticsListener.EventTime,
         loadEventInfo: LoadEventInfo,
-        mediaLoadData: MediaLoadData
+        mediaLoadData: MediaLoadData,
     ) {
         super.onLoadCanceled(eventTime, loadEventInfo, mediaLoadData)
         logLoadEvent("Load canceled", loadEventInfo, mediaLoadData)
@@ -42,7 +43,7 @@ class CustomAnalyticsListener : AnalyticsListener {
         loadEventInfo: LoadEventInfo,
         mediaLoadData: MediaLoadData,
         error: IOException,
-        wasCanceled: Boolean
+        wasCanceled: Boolean,
     ) {
         super.onLoadError(eventTime, loadEventInfo, mediaLoadData, error, wasCanceled)
         logLoadEvent("Load error", loadEventInfo, mediaLoadData)
@@ -51,7 +52,7 @@ class CustomAnalyticsListener : AnalyticsListener {
     private fun logLoadEvent(
         eventName: String,
         loadEventInfo: LoadEventInfo,
-        mediaLoadData: MediaLoadData
+        mediaLoadData: MediaLoadData,
     ) {
         val dataSourceType = when (mediaLoadData.dataType) {
             C.DATA_TYPE_MEDIA -> "media"

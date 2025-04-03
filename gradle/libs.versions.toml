@@ -1,19 +1,19 @@
 [versions]
-agp = "8.5.1"
-kotlin = "1.9.0"
-coreKtx = "1.13.1"
+agp = "8.5.2"
+kotlin = "2.1.10"
+coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-lifecycleRuntimeKtx = "2.8.3"
-activityCompose = "1.9.0"
-composeBom = "2024.08.00"
-media3Exo = "1.4.0"
-hiltCompose = "1.0.0"
-kotlinSerialization = "1.6.2"
-kotlinCoroutines = "1.8.1"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.10.1"
+composeBom = "2025.03.01"
+media3Exo = "1.6.0"
+hiltCompose = "1.2.0"
+kotlinSerialization = "1.8.0"
+kotlinCoroutines = "1.10.1"
 coil = "2.7.0"
-constraintlayout = "1.0.1"
+constraintlayout = "1.1.1"
 permission = "0.34.0"
 
 [libraries]
@@ -41,8 +41,8 @@ kotlinx-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinCoroutines" }
 coil = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 permission = { module = "com.google.accompanist:accompanist-permissions", version.ref = "permission" }
-
 hilt-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltCompose" }
+
 
 [bundles]
 media3-bundles = ["media3-exo-player", "media3-exo-dashplayer", "media3-exo-okhttp", "media3-exo-ui", "media3-exo-cronet"]
@@ -51,4 +51,4 @@ media3-bundles = ["media3-exo-player", "media3-exo-dashplayer", "media3-exo-okht
 android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

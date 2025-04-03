@@ -1,26 +1,18 @@
 package com.densitech.scrollsmooth.ui.audio
 
 import android.content.Context
-import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -44,7 +36,7 @@ fun AudioSelectionBottomSheet(
 
     val sheetState = rememberModalBottomSheetState()
     val context = LocalContext.current
-    val lifeCycleOwner = LocalLifecycleOwner.current
+    val lifeCycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     var isAudioPlaying by rememberSaveable {
         mutableStateOf(false)
@@ -71,7 +63,7 @@ fun AudioSelectionBottomSheet(
             isAudioPlaying = false
             exoPlayer.pause()
         } else {
-            exoPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(previewAudio!!.audioUrl)))
+            exoPlayer.setMediaItem(MediaItem.fromUri(previewAudio!!.audioUrl.toUri()))
             exoPlayer.prepare()
             exoPlayer.play()
         }

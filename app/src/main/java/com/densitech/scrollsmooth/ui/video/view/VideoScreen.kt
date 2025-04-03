@@ -17,23 +17,12 @@ import androidx.compose.foundation.pager.PagerSnapDistance
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -53,11 +42,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @SuppressLint("InlinedApi")
 @ExperimentalPermissionsApi
 @androidx.annotation.OptIn(UnstableApi::class)
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewModel) {
     val context = LocalContext.current
-    val lifeCycleOwner = LocalLifecycleOwner.current
+    val lifeCycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     val mediaItemSource = videoScreenViewModel.mediaItemSource.collectAsState()
     val playerPool = videoScreenViewModel.playerPool.collectAsState()
@@ -177,7 +165,7 @@ fun VideoScreen(pagerState: PagerState, videoScreenViewModel: VideoScreenViewMod
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black),
-                        beyondBoundsPageCount = 1,
+                        beyondViewportPageCount = 1,
                         flingBehavior = fling
                     ) { page ->
                         val realPage = page % totalPageCount

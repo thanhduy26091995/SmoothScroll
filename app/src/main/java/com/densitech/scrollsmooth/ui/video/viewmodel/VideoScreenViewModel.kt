@@ -16,14 +16,13 @@ import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cronet.CronetDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRendererCapabilitiesList
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.source.preload.DefaultPreloadManager
-import androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Status.STAGE_LOADED_TO_POSITION_MS
+import androidx.media3.exoplayer.source.preload.DefaultPreloadManager.Status.STAGE_LOADED_FOR_DURATION_MS
 import androidx.media3.exoplayer.source.preload.TargetPreloadStatusControl
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
@@ -40,7 +39,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.chromium.net.CronetEngine
 import java.util.concurrent.Executors
@@ -152,15 +150,21 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
             .setCacheWriteDataSinkFactory(cacheSink)
             .setUpstreamDataSourceFactory(cronetDataSourceFactory)
 
-        preloadManager = DefaultPreloadManager(
-            DefaultPreloadControl(),
-            DefaultMediaSourceFactory(context).setDataSourceFactory(cacheDataSourceFactory),
-            trackSelector,
-            DefaultBandwidthMeter.getSingletonInstance(context),
-            DefaultRendererCapabilitiesList.Factory(renderersFactory),
-            loadControl.allocator,
-            playbackThread.looper
-        )
+        preloadManager = DefaultPreloadManager.Builder(context, DefaultPreloadControl())
+            .setMediaSourceFactory(
+                DefaultMediaSourceFactory(context).setDataSourceFactory(
+                    cacheDataSourceFactory
+                )
+            )
+            .setTrackSelectorFactory {
+                trackSelector
+            }
+            .setBandwidthMeter(DefaultBandwidthMeter.getSingletonInstance(context))
+            .setRenderersFactory(renderersFactory)
+            .setPreloadLooper(playbackThread.looper)
+            .setLoadControl(loadControl)
+            .build()
+
 
         for (i in 0 until ITEM_ADD_REMOVE_COUNT) {
             addMediaItem(index = i, isAddingToRight = true)
@@ -186,7 +190,7 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
     fun getMediaSourceByMediaItem(
         context: Context,
         mediaItem: MediaItem,
-        index: Int
+        index: Int,
     ): MediaSource? {
         if (_mediaSourceState.value == MediaSourceState.LOCAL_SOURCE) {
             val cache = DownloadVideoCache.getInstance(context)
@@ -389,9 +393,12 @@ class VideoScreenViewModel @Inject constructor(private val getVideosUseCase: Get
     inner class DefaultPreloadControl : TargetPreloadStatusControl<Int> {
         override fun getTargetPreloadStatus(rankingData: Int): TargetPreloadStatusControl.PreloadStatus? {
             if (abs(rankingData - currentPlayingIndex) == 2) {
-                return DefaultPreloadManager.Status(STAGE_LOADED_TO_POSITION_MS, 500L)
+                return DefaultPreloadManager.Status(
+                    DefaultPreloadManager.Status.STAGE_LOADED_FOR_DURATION_MS,
+                    500L
+                )
             } else if (abs(rankingData - currentPlayingIndex) == 1) {
-                return DefaultPreloadManager.Status(STAGE_LOADED_TO_POSITION_MS, 1000L)
+                return DefaultPreloadManager.Status(STAGE_LOADED_FOR_DURATION_MS, 1000L)
             }
             return null
         }
