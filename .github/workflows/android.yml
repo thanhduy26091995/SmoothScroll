@@ -19,6 +19,17 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: gradle
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/keystore.jks
+
+      - name: Create Signing Configs
+        run: |
+          mkdir -p ~/.gradle
+            echo "MYAPP_UPLOAD_STORE_FILE=keystore.jks" >> ~/.gradle/gradle.properties
+            echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.MYAPP_UPLOAD_KEY_ALIAS }}" >> ~/.gradle/gradle.properties
+            echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.MYAPP_UPLOAD_STORE_PASSWORD }}" >> ~/.gradle/gradle.properties
+            echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.MYAPP_UPLOAD_KEY_PASSWORD }}" >> ~/.gradle/gradle.properties
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -27,13 +38,13 @@ jobs:
         run: ./gradlew clean
 
       - name: Build Gradle
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 7
           compression-level: 6

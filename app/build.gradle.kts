@@ -22,13 +22,30 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = project.findProperty("MYAPP_UPLOAD_STORE_FILE").toString()
+            val storePassword = project.findProperty("MYAPP_UPLOAD_STORE_PASSWORD").toString()
+            val keyAlias = project.findProperty("MYAPP_UPLOAD_KEY_ALIAS").toString()
+            val keyPassword = project.findProperty("MYAPP_UPLOAD_KEY_PASSWORD").toString()
+
+            storeFile = file(storeFilePath)
+            this.storePassword = storePassword
+            this.keyAlias = keyAlias
+            this.keyPassword = keyPassword
+        }
+    }
+
+
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig =
+                signingConfigs.getByName("release")  // Link signingConfig to release build type
         }
     }
     compileOptions {
